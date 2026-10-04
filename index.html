@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>جنگ کاغذی</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f6f8fc;--line:#b9d3f0;--ink:#1b2f5b;--red:#d4474f;--gold:#e0a526;--ok:#2f8f5b}
+*{box-sizing:border-box;margin:0}
+body{font-family:Vazirmatn,Tahoma,sans-serif;color:var(--ink);background:var(--paper) repeating-linear-gradient(transparent 0 27px,var(--line) 27px 28px);min-height:100vh;padding:0 12px 40px;border-right:3px solid var(--red);max-width:560px;margin:auto;padding-right:16px}
+h1{font-weight:900;font-size:28px;padding:16px 0 4px}
+.sub{font-size:13px;opacity:.7;margin-bottom:12px}
+.box{background:#fffefa;border:2px solid var(--ink);border-radius:6px 14px 6px 14px;padding:12px;margin-bottom:12px}
+input,button{font:inherit}
+input{width:100%;padding:10px;border:2px solid var(--ink);border-radius:8px;margin:8px 0;background:#fff}
+button{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
+button:disabled{opacity:.35}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.big{font-size:26px;font-weight:900}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;background:#fff;color:var(--ink);border:2px solid var(--ink)}
+.tabs button.on{background:var(--ink);color:#fff}
+.city{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+.bar{flex:1;height:12px;background:#dbe6f5;border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.row small{display:block;opacity:.7;font-size:12px}
+.cb{background:var(--red);padding:6px 10px;font-size:13px}
+.cb.dead{background:#999}
+.log{font-size:12.5px;line-height:1.9}
+.err{position:fixed;bottom:16px;left:12px;right:12px;max-width:520px;margin:auto;background:var(--red);color:#fff;padding:10px;border-radius:10px;text-align:center}
+.sel{background:var(--gold);color:var(--ink)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<h1>جنگ کاغذی</h1>
+<div class="sub">لول ۱ · کاغذ آبی</div>
+<div id="login" class="box">
+  <b>اسم فرمانده‌ات چیه؟</b>
+  <input id="nm" maxlength="14" placeholder="مثلاً: کاغذ‌خان">
+  <button id="go">ورود به جنگ</button>
+</div>
+<div id="game" class="hide">
+  <div class="box">
+    <div class="top"><span id="who"></span><span>🏆 <span id="wins">0</span></span></div>
+    <div class="big"><span id="tk">0</span> تکه</div>
+    <div class="sub" id="inc"></div>
+    <div id="mine"></div>
+    <div class="sub" id="def"></div>
+  </div>
+  <div class="tabs">
+    <button data-t="atk" class="on">حمله</button>
+    <button data-t="shop">فروشگاه</button>
+  </div>
+  <div id="p-atk" class="box"></div>
+  <div id="p-shop" class="box hide"></div>
+  <div class="box log" id="log"></div>
+</div>
+<div id="er" class="err hide"></div>
+<script>
+const $=s=>document.querySelector(s);
+let ws,cat={},S=null,tab="atk",wsel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
+function conn(){
+  ws=new WebSocket(location.origin.replace("http","ws")+"/ws");
+  ws.onopen=()=>{if(localStorage.pwname)ws.send(JSON.stringify({t:"join",id,name:localStorage.pwname}))};
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.t==="cat")cat=m.cat;
+    if(m.t==="err")toast(m.m);
+    if(m.t==="state"){S=m;$("#login").classList.add("hide");$("#game").classList.remove("hide");draw()}};
+  ws.onclose=()=>setTimeout(conn,1500);
+}
+const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
+function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
+$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;localStorage.pwname=n;send({t:"join",id,name:n})};
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
+const bar=h=>`<div class="bar"><i style="width:${h}%;${h<35?"background:var(--red)":""}"></i></div>`;
+function draw(){
+  const me=S.me;
+  $("#who").textContent=me.name;$("#wins").textContent=me.wins;$("#tk").textContent=me.tekke;
+  $("#inc").textContent=`درآمد: روزی ${me.inc} تکه (هر روز = ۶۰ ثانیه)`;
+  $("#mine").innerHTML=me.cities.map((c,i)=>`<div class="city"><span>شهر ${i+1}${i?"":" (مرکز)"}</span>${bar(c)}<b>${c}</b></div>`).join("");
+  $("#def").textContent=Object.entries(me.hp).filter(([,v])=>v>0).map(([k,v])=>`${cat[k]?.n}: ${Math.ceil(v/cat[k].hp)}`).join(" · ");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+  $("#p-atk").classList.toggle("hide",tab!=="atk");$("#p-shop").classList.toggle("hide",tab!=="shop");
+  const own=Object.entries(me.inv).filter(([,v])=>v>0);
+  if(!own.some(([k])=>k===wsel))wsel=own[0]?.[0]||null;
+  const foes=S.all.filter(p=>p.id!==me.id);
+  $("#p-atk").innerHTML=`<b>سلاح انتخابی</b><div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:6px">${own.length?own.map(([k,v])=>`<button class="${k===wsel?"sel":""}" data-w="${k}">${cat[k].n} ×${v}</button>`).join(""):"سلاحی نداری. از فروشگاه بخر."}</div>`+
+   (foes.length?foes.map(p=>`<div class="row"><div><b>${p.name}</b><small>${p.on?"آنلاین":"آفلاین"} · 🏆 ${p.wins}</small></div><div style="display:flex;gap:4px">${p.cities.map((c,i)=>`<button class="cb ${c?"":"dead"}" data-t="${p.id}" data-c="${i}" ${c&&wsel?"":"disabled"}>${i+1}: ${c}</button>`).join("")}</div></div>`).join(""):"<div class='sub'>هنوز حریفی نیست. لینک بازی را برای دوستانت بفرست.</div>");
+  document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{wsel=b.dataset.w;draw()});
+  document.querySelectorAll(".cb").forEach(b=>b.onclick=()=>send({t:"atk",tid:b.dataset.t,ci:+b.dataset.c,w:wsel}));
+  const grp={def:"دفاع",atk:"حمله",inc:"درآمد"};
+  $("#p-shop").innerHTML=Object.keys(grp).map(g=>`<b>${grp[g]}</b>`+Object.entries(cat).filter(([,v])=>v.k===g).map(([k,v])=>`<div class="row"><div>${v.n}${v.q>1?` ×${v.q}`:""}<small>${v.d}</small></div><button data-b="${k}" ${me.tekke<v.p?"disabled":""}>${v.p} تکه</button></div>`).join("")).join("");
+  document.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>send({t:"buy",k:b.dataset.b}));
+  $("#log").innerHTML=S.log.map(l=>`<div>${l}</div>`).join("")||"هنوز اتفاقی نیفتاده.";
+}
+conn();
+</script>
+</body>
+</html>

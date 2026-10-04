@@ -1,0 +1,5 @@
+{
+  "name": "paper-war",
+  "private": true,
+  "devDependencies": { "wrangler": "^4.50.0" }
+}
