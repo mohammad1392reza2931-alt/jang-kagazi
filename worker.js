@@ -46,9 +46,11 @@ export class GameRoom extends DurableObject {
     this.last = Date.now();
     this.n = 0;
     ctx.blockConcurrencyWhile(async () => {
-      await this.env.DB.exec("CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL, updated INTEGER)");
-      const { results } = await this.env.DB.prepare("SELECT id, data FROM players").all();
-      for (const r of results) this.players[r.id] = JSON.parse(r.data);
+      try {
+        await this.env.DB.exec("CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL, updated INTEGER)");
+        const { results } = await this.env.DB.prepare("SELECT id, data FROM players").all();
+        for (const r of results) this.players[r.id] = JSON.parse(r.data);
+      } catch (e) { console.log("D1 init failed", e); this.dbErr = String(e); }
     });
     setInterval(() => this.tick(), 1000);
   }
@@ -144,6 +146,7 @@ export class GameRoom extends DurableObject {
       this.saving = null;
       const q = "INSERT INTO players (id,name,data,updated) VALUES (?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET name=?2,data=?3,updated=?4";
       const st = Object.values(this.players).map((p) => this.env.DB.prepare(q).bind(p.id, p.name, JSON.stringify(p), Date.now()));
+      if (this.dbErr) return;
       if (st.length) try { await this.env.DB.batch(st); } catch (e) { console.log("D1 save failed", e); }
     }, 3000);
   }

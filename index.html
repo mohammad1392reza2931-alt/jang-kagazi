@@ -42,6 +42,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
   <b>اسم فرمانده‌ات چیه؟</b>
   <input id="nm" maxlength="14" placeholder="مثلاً: کاغذ‌خان">
   <button id="go">ورود به جنگ</button>
+  <div class="sub" id="st" style="margin-top:8px">در حال اتصال به سرور...</div>
 </div>
 <div id="game" class="hide">
   <div class="box">
@@ -65,16 +66,16 @@ const $=s=>document.querySelector(s);
 let ws,cat={},S=null,tab="atk",wsel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
 function conn(){
   ws=new WebSocket(location.origin.replace("http","ws")+"/ws");
-  ws.onopen=()=>{if(localStorage.pwname)ws.send(JSON.stringify({t:"join",id,name:localStorage.pwname}))};
+  ws.onopen=()=>{$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)ws.send(JSON.stringify({t:"join",id,name:localStorage.pwname}))};
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.t==="cat")cat=m.cat;
     if(m.t==="err")toast(m.m);
     if(m.t==="state"){S=m;$("#login").classList.add("hide");$("#game").classList.remove("hide");draw()}};
-  ws.onclose=()=>setTimeout(conn,1500);
+  ws.onclose=()=>{$("#st").textContent="اتصال به سرور برقرار نیست، دوباره تلاش می‌کنم...";setTimeout(conn,1500)};
 }
 const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
 function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
-$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;localStorage.pwname=n;send({t:"join",id,name:n})};
+$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;localStorage.pwname=n;if(ws.readyState!==1)return toast("هنوز به سرور وصل نشدم، چند ثانیه صبر کن");$("#st").textContent="منتظر پاسخ سرور...";send({t:"join",id,name:n})};
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
 const bar=h=>`<div class="bar"><i style="width:${h}%;${h<35?"background:var(--red)":""}"></i></div>`;
 function draw(){
