@@ -1,5 +1,5 @@
 {
-  "name": "paper-war",
+  "name": "jang-kagazi",
   "main": "worker.js",
   "compatibility_date": "2025-01-01",
   "durable_objects": { "bindings": [{ "name": "GAME", "class_name": "GameRoom" }] },
