@@ -59,6 +59,7 @@ const Q = [
   { x: "۵ ساختمان یا دفاع بچین", k: "plc", n: 5, r: { t: 300, xp: 40 } },
 ];
 const BPR = { 5: ["plane", 3], 10: ["cutter", 2], 15: ["bomber", 1], 20: ["ballistic", 1] };
+const KEYS = ["hq", ...Object.keys(CAT)];
 const RLV = [1, 30, 60], RM = [1, 2, 3]; // سطح لازم و ضریب درآمد هر سرزمین
 const clean = (s) => String(s || "").replace(/[<>&"'`]/g, "").trim();
 const DAY = 60, W_ = 192;
@@ -161,6 +162,17 @@ export class GameRoom extends DurableObject {
       if (!pl || pl.o !== me.id || !b || b.k === "hq") return;
       me.inv[b.k] = (me.inv[b.k] || 0) + 1; pl.g[m.c] = null;
     } else if (m.t === "atk") this.attack(ws, me, m);
+    else if (m.t === "world") {
+      const r = m.r | 0;
+      if (r < 0 || r > 2 || me.lv < RLV[r]) return;
+      const p = {};
+      for (let j = 0; j < 64; j++) {
+        const pl = this.plots[r * 64 + j]; if (!pl) continue;
+        const a = []; pl.g.forEach((b, c) => { if (b) a.push([c, KEYS.indexOf(b.k), Math.ceil(b.hp)]); });
+        p[r * 64 + j] = a;
+      }
+      return ws.send(JSON.stringify({ t: "world", r, p }));
+    }
     else if (m.t === "prof") { me.emp = clean(m.emp).slice(0, 16) || me.emp; me.king = clean(m.king).slice(0, 14) || me.king; }
     else if (m.t === "name") { const pl = this.plots[m.i]; if (pl && pl.o === me.id) pl.nm = clean(m.nm).slice(0, 16); }
     else if (m.t === "qclaim") {

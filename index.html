@@ -73,6 +73,7 @@ function conn(){
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.t==="cat"){cat=m.cat;Q=m.Q;RLV=m.RLV}
     if(m.t==="err")toast(m.m);
+    if(m.t==="world"){wData=m;buildWorld()}
     if(m.t==="alert"){toast(m.m);beep(160,.3,"sawtooth");navigator.vibrate&&navigator.vibrate([80,40,80])}
     if(m.t==="state"){S=m;$("#login").classList.add("hide");$("#game").classList.remove("hide");draw()}};
   ws.onclose=()=>{$("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";setTimeout(conn,1500)};
@@ -91,7 +92,9 @@ function draw(){
   $("#inv").innerHTML=inv.length?inv.map(([k,v])=>`<button class="chip ${k===sel?"sel":""}" data-s="${k}">${ic(k)} ${cat[k].n} ×${v}</button>`).join(""):"<span class='sub'>انبارت خالیه. از فروشگاه بخر.</span>";
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
   const p=$("#p");
-  $("#stage").style.display=tab==="base"&&S.view?"block":"none";if(tab==="base")sync3d();
+  const showB=tab==="base"&&S.view,showM=tab==="map"&&S.me.lv>=RLV[realm];
+  $("#stage").style.display=showB||showM?"block":"none";$("#stage").style.height=showM?"min(115vw,560px)":"min(80vw,400px)";
+  mode=showM?"map":"base";if(showB)sync3d();if(showM)worldReq();
   if(tab==="base")base(p,own);else if(tab==="map")map(p,own);else if(tab==="shop")shop(p);else if(tab==="ally")ally(p);else if(tab==="quest")quest(p);else if(tab==="emp")emp(p);else chat(p);
   p.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>send({t:"view",i:+b.dataset.v}));
   p.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>send({t:"gift",to:b.dataset.g,a:100}));
@@ -128,7 +131,7 @@ function chat(p){
 let AC;function beep(f,d=.1,ty="square"){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch{}}
 // ---------- سه‌بعدی ----------
 const COL={cardcastle:0xd9b382,pencil:0xf5d142,ruler:0xaaaaaa,tape:0xe8e0a0,stapwall:0x888888,book:0x3a6ea5,marker:0xdd4477,ink:0x222244,dome:0x99ddee,vault:0x555555,pencil_mine:0xf5d142,printer:0xbbbbbb,library:0xd8c4a0,tekke_bank:0xf2c14e,a4_factory:0xffffff,diamond_wall:0x7fe8ff,gold_mine:0xf2c14e,hq:0xf2c14e,handk:0xffffff,thread:0x8fb8de,ped:0x9b8cf2,wall:0x2f6fd0,eraser:0xf29bb0,clip:0xb0b7c3,card:0xfff1c1,paper_s:0xfafafa,paper_m:0xdfe4ff};
-let R,sc,cam,sun,cells={},tiles=[],curI=null,fx=[],lastEv=-1,th=.8,ph=.95,dist=13,ptrs=new Map(),moved=0;
+let wsc,wcam,wsun,wmesh,wplots=[],wlabels=[],wData=null,wRealm=-1,wTimer=0,mode="base",mt={x:35,z:35,d:70},lc={},R,sc,cam,sun,cells={},tiles=[],curI=null,fx=[],lastEv=-1,th=.8,ph=.95,dist=13,ptrs=new Map(),moved=0;
 function mk(k){
   const g=new THREE.Group(),M=new THREE.MeshLambertMaterial({color:COL[k]||0xcccccc});
   const bx=(w,h,d,y,m=M,x=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y+h/2,0);g.add(o)};
@@ -145,25 +148,65 @@ function init3d(){
   sc=new THREE.Scene();sc.background=new THREE.Color(0xbfd9f5);cam=new THREE.PerspectiveCamera(45,1,.1,100);
   sc.add(new THREE.AmbientLight(0xffffff,.7));sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(5,10,4);sc.add(sun);
   const gr=new THREE.Mesh(new THREE.BoxGeometry(30,.2,30),new THREE.MeshLambertMaterial({color:0x7fae7a}));gr.position.y=-.2;sc.add(gr);
+  wsc=new THREE.Scene();wsc.background=new THREE.Color(0xbfd9f5);wcam=new THREE.PerspectiveCamera(50,1,.5,400);
+  wsc.add(new THREE.AmbientLight(0xffffff,.75));wsun=new THREE.DirectionalLight(0xffffff,.8);wsun.position.set(30,60,40);wsc.add(wsun);
+  const wg=new THREE.Mesh(new THREE.BoxGeometry(400,.2,400),new THREE.MeshLambertMaterial({color:0x6f9a6a}));wg.position.set(35,-.3,35);wsc.add(wg);
   for(let c=0;c<64;c++){const[x,z]=P3(c);const t=new THREE.Mesh(new THREE.BoxGeometry(.96,.1,.96),new THREE.MeshLambertMaterial({color:(c%8+Math.floor(c/8))%2?0xf4f1e6:0xe3ecf8}));t.position.set(x,-.05,z);t.userData.c=c;sc.add(t);tiles.push(t)}
   const el=R.domElement;
   el.onpointerdown=e=>{el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);moved=0};
+  const zm=f=>{if(mode==="map")mt.d=Math.min(140,Math.max(14,mt.d*f));else dist=Math.min(24,Math.max(6,dist*f))};
   el.onpointermove=e=>{const o=ptrs.get(e.pointerId);if(!o)return;
-    if(ptrs.size===2){const [a,b]=[...ptrs.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);ptrs.set(e.pointerId,[e.clientX,e.clientY]);const [a2,b2]=[...ptrs.values()];dist=Math.min(24,Math.max(6,dist*d0/Math.hypot(a2[0]-b2[0],a2[1]-b2[1])));moved=99;return}
-    const dx=e.clientX-o[0],dy=e.clientY-o[1];moved+=Math.abs(dx)+Math.abs(dy);th-=dx*.01;ph=Math.min(1.3,Math.max(.5,ph-dy*.005));ptrs.set(e.pointerId,[e.clientX,e.clientY])};
+    if(ptrs.size===2){const [a,b]=[...ptrs.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);ptrs.set(e.pointerId,[e.clientX,e.clientY]);const [a2,b2]=[...ptrs.values()];zm(d0/Math.hypot(a2[0]-b2[0],a2[1]-b2[1]));moved=99;return}
+    const dx=e.clientX-o[0],dy=e.clientY-o[1];moved+=Math.abs(dx)+Math.abs(dy);
+    if(mode==="map"){const k=mt.d*.0022;mt.x=Math.min(75,Math.max(-5,mt.x-dx*k));mt.z=Math.min(75,Math.max(-5,mt.z-dy*k))}
+    else{th-=dx*.01;ph=Math.min(1.3,Math.max(.5,ph-dy*.005))}
+    ptrs.set(e.pointerId,[e.clientX,e.clientY])};
   el.onpointerup=e=>{ptrs.delete(e.pointerId);if(moved<8&&!ptrs.size)tap(e)};
-  el.onwheel=e=>{dist=Math.min(24,Math.max(6,dist+e.deltaY*.01));e.preventDefault()};
+  el.onpointercancel=e=>ptrs.delete(e.pointerId);
+  el.onwheel=e=>{zm(1+e.deltaY*.001);e.preventDefault()};
   loop();
 }
 function tap(e){
+  if(mode==="map")return tapMap(e);
   const r=R.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
   rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
   const hit=rc.intersectObjects([...tiles,...Object.values(cells).map(x=>x.g)],true)[0];if(!hit)return;
   let o=hit.object;while(o&&o.userData.c===undefined)o=o.parent;if(o)onCell(o.userData.c);
 }
+function fit(){const st=$("#stage"),w=st.clientWidth,h=st.clientHeight;if(!w)return;if(R.domElement.clientWidth!==w||R.domElement.clientHeight!==h){R.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}}
+function worldReq(){init3d();if(!R)return;fit();const now=Date.now();if(now-wTimer>3000||wRealm!==realm){wTimer=now;wRealm=realm;send({t:"world",r:realm})}}
+function lab(t,s){const k=t+"|"+s;if(!lc[k]){const cv=document.createElement("canvas");cv.width=256;cv.height=64;const x=cv.getContext("2d");x.fillStyle="rgba(255,255,255,.88)";x.fillRect(0,0,256,64);x.fillStyle="#1b2f5b";x.textAlign="center";x.font="bold 26px Tahoma,sans-serif";x.fillText(t,128,28);x.font="17px Tahoma,sans-serif";x.fillText(s,128,54);lc[k]=new THREE.CanvasTexture(cv)}
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:lc[k]}));sp.scale.set(7,1.75,1);return sp}
+function buildWorld(){
+  if(!wsc||!wData||wData.r!==realm||!S)return;
+  if(wmesh){wsc.remove(wmesh);wmesh.geometry.dispose();wmesh.material.dispose()}
+  wplots.forEach(m=>{wsc.remove(m);m.geometry.dispose();m.material.dispose()});wplots=[];wlabels.forEach(s=>{wsc.remove(s);s.material.dispose()});wlabels=[];
+  const keys=["hq",...Object.keys(cat)];let n=0;Object.values(wData.p).forEach(a=>n+=a.length);
+  wmesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial(),Math.max(1,n));
+  const dm=new THREE.Object3D(),col=new THREE.Color(),CL={fr:0x8fc08a,me:0x7fa8e8,al:0xe8d27f,en:0xe89a9f};let q=0;
+  for(let j=0;j<64;j++){
+    const i=realm*64+j,m=S.map[i],px=(j%8)*10,pz=Math.floor(j/8)*10;
+    const own=!m?"fr":m[3]===id?"me":S.me.ally&&m[2]===S.me.ally?"al":"en";
+    const g=new THREE.Mesh(new THREE.BoxGeometry(8.6,.2,8.6),new THREE.MeshLambertMaterial({color:CL[own]}));
+    g.position.set(px,-.1,pz);g.userData.pi=i;wsc.add(g);wplots.push(g);
+    if(m){const s=lab(m[4]||"شهر "+(i+1),"👑 "+m[6]+" · "+m[0]);s.position.set(px,3.4,pz);wsc.add(s);wlabels.push(s)}
+    for(const[c,ki,hp] of (wData.p[i]||[])){
+      const k=keys[ki],it=cat[k],hh=k==="hq"?1.8:it?.k==="inc"?1:Math.min(1.4,.25+(it?.hp||10)/60);
+      dm.position.set(px+(c%8)-3.5,hh/2,pz+Math.floor(c/8)-3.5);dm.scale.set(.8,hh,.8);dm.updateMatrix();
+      wmesh.setMatrixAt(q,dm.matrix);wmesh.setColorAt(q,col.setHex(COL[k]||0xcccccc));q++}
+  }
+  wmesh.count=q;wmesh.instanceMatrix.needsUpdate=true;if(wmesh.instanceColor)wmesh.instanceColor.needsUpdate=true;wsc.add(wmesh);
+}
+function tapMap(e){
+  const r=R.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
+  rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),wcam);
+  const h=rc.intersectObjects(wplots)[0];if(!h)return;const i=h.object.userData.pi;
+  if(S.map[i]){send({t:"view",i});tab="base";draw()}
+  else{const cost=500*(realm+1)*S.map.filter(m=>m&&m[3]===id).length;if(confirm(`این زمین را به ${cost} تکه می‌خری؟`)){send({t:"buyplot",i});tab="base"}}
+}
 function sync3d(){
   init3d();if(!R||!S.view)return;
-  const st=$("#stage"),w=st.clientWidth,h=st.clientHeight;if(R.domElement.width!==w*R.getPixelRatio()){R.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+  fit();
   const v=S.view;
   if(curI!==v.i){Object.values(cells).forEach(x=>sc.remove(x.g));cells={};curI=v.i}
   v.g.forEach((b,c)=>{
@@ -189,25 +232,21 @@ function boom(x,z){
 function loop(){
   requestAnimationFrame(loop);if(!R||$("#stage").style.display==="none")return;
   const now=Date.now(),d=(Math.sin(now/20000)+1)/2;
-  sc.background.setRGB(.75-.6*d,.85-.65*d,.96-.6*d);sun.intensity=.9-.6*d;
+  (mode==="map"?wsc:sc).background.setRGB(.75-.6*d,.85-.65*d,.96-.6*d);sun.intensity=wsun.intensity=.9-.6*d;
   fx=fx.filter(f=>{const a=(now-f.t)/1000;
     if(f.k==="p"){const q=Math.min(1,a/.5);f.m.position.set(f.m.position.x+(f.x-f.m.position.x)*q*.3,6-5.5*q,f.m.position.z+(f.z-f.m.position.z)*q*.3);
       if(q>=1){sc.remove(f.m);boom(f.x,f.z);return false}return true}
     f.m.position.x+=f.vx*.016;f.m.position.z+=f.vz*.016;f.m.position.y+=f.vy*.016-a*.05;f.m.material.opacity=Math.max(0,1-a/.6);
     if(a>.6){sc.remove(f.m);return false}return true});
-  cam.position.set(dist*Math.sin(ph)*Math.sin(th),dist*Math.cos(ph),dist*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,0);R.render(sc,cam);
+  cam.position.set(dist*Math.sin(ph)*Math.sin(th),dist*Math.cos(ph),dist*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,0);
+  if(mode==="map"){wcam.aspect=R.domElement.clientWidth/R.domElement.clientHeight;wcam.updateProjectionMatrix();wcam.position.set(mt.x,mt.d*.85,mt.z+mt.d*.55);wcam.lookAt(mt.x,0,mt.z);R.render(wsc,wcam)}else R.render(sc,cam);
 }
 let realm=0;const RN=["سرزمین نخست","سرزمین دوم","سرزمین سوم"];
 function map(p,own){
   const cost=500*(realm+1)*own.length,lock=S.me.lv<RLV[realm];
   p.innerHTML=`<div class="chips">${RN.map((n,r)=>`<button class="chip ${r===realm?"sel":""}" data-r="${r}">${n} (سطح ${RLV[r]})${S.me.lv<RLV[r]?" 🔒":""}</button>`).join("")}</div>`+(lock?`<div class="sub" style="margin-top:8px">برای ورود به این سرزمین باید به سطح ${RLV[realm]} برسی. درآمد این سرزمین ${realm+1} برابر است.</div>`:
-  `<div class="sub" style="margin:8px 0 0">زمین خالی بخر (${cost} تکه) یا شهر بقیه را ببین. 🟦 مال تو · 🟨 هم‌پیمان · 🟥 دشمن · درآمد ×${realm+1}</div><div class="g">${S.map.slice(realm*64,realm*64+64).map((m,j)=>{
-    const cl=!m?"fr":m[3]===id?"me":S.me.ally&&m[2]===S.me.ally?"al":"en";
-    return `<button class="c ${cl}" data-m="${realm*64+j}" style="font-size:10px">${m?(m[4]||m[0]).slice(0,3):"+"}</button>`}).join("")}</div>`);
-  p.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{realm=+b.dataset.r;draw()});
-  p.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{const i=+b.dataset.m;
-    if(S.map[i]){send({t:"view",i});tab="base";draw()}
-    else if(confirm(`این زمین را به ${cost} تکه می‌خری؟`)){send({t:"buyplot",i});tab="base"}});
+  `<div class="sub" style="margin-top:8px">بکش تا جابه‌جا شوی · دو انگشت یا چرخ موس برای زوم · روی یک زمین بزن تا واردش شوی (زمین خالی: خرید ${cost} تکه) · 🟦 مال تو · 🟨 هم‌پیمان · 🟥 دشمن · 🟩 خالی · درآمد ×${realm+1}</div>`);
+  p.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{realm=+b.dataset.r;wData=null;wRealm=-1;draw()});
 }
 function shop(p){
   const g={def:"دفاع",atk:"حمله",inc:"منبع پول"},me=S.me;
