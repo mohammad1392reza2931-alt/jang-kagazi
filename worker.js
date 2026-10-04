@@ -92,7 +92,8 @@ export class GameRoom extends DurableObject {
     if (req.headers.get("Upgrade") !== "websocket") return new Response("ws only", { status: 400 });
     const [c, s] = Object.values(new WebSocketPair());
     s.accept();
-    s.addEventListener("message", (e) => this.onMsg(s, e.data));
+    s.addEventListener("message", (e) => { try { this.onMsg(s, e.data); } catch (x) { console.log("onMsg error", x); try { this.err(s, "خطای سرور، دوباره تلاش کن"); } catch {} } });
+    s.addEventListener("error", () => this.socks.delete(s));
     s.addEventListener("close", () => this.socks.delete(s));
     s.send(JSON.stringify({ t: "cat", cat: CAT, Q, RLV }));
     return new Response(null, { status: 101, webSocket: c });
@@ -135,7 +136,7 @@ export class GameRoom extends DurableObject {
       }
       const pp = this.P[id]; pp.lv ??= 1; pp.xp ??= 0; pp.tr ??= 0; pp.bp ??= 0; pp.bpc ??= 0; pp.emp ??= "امپراطوری " + pp.name; pp.king ??= pp.name;
       this.socks.set(ws, { id, view: this.mine(id)[0] ?? null });
-      this.save(); return this.push();
+      this.save(); this.push(ws); return this.push();
     }
     const sk = this.socks.get(ws), me = sk && this.P[sk.id];
     if (!me) return;
@@ -243,7 +244,7 @@ export class GameRoom extends DurableObject {
       const o = this.P[pl.o]; if (!o) continue;
       for (const b of pl.g) if (b && CAT[b.k]?.inc) o.tekke += (CAT[b.k].inc * RM[pi >> 6] / DAY) * dt;
     }
-    if (this.socks.size) { this.push(); if (++this.n % 30 === 0) this.save(); }
+    if (this.socks.size) { if (this.n % 2 === 0) this.push(); if (++this.n % 30 === 0) this.save(); }
   }
 
   save() {
@@ -257,14 +258,16 @@ export class GameRoom extends DurableObject {
     }, 3000);
   }
 
-  push() {
+  push(only) {
     const map = [...Array(W_).keys()].map((i) => {
       const pl = this.plots[i], o = pl && this.P[pl.o];
       return o ? [o.name, Math.ceil(pl.g[27]?.hp ?? pl.g.find((b) => b?.k === "hq")?.hp ?? 0), o.ally, o.id, pl.nm || "", o.emp, o.king] : null;
     });
     const pub = Object.values(this.P).map((p) => ({ name: p.name, ally: p.ally, caps: p.caps, tr: p.traitor, tp: p.tr, lv: p.lv, emp: p.emp, king: p.king, n: this.mine(p.id).length }));
     for (const [ws, sk] of this.socks) {
+      if (only && ws !== only) continue;
       const me = this.P[sk.id], pl = this.plots[sk.view];
+      if (!me) continue;
       this.q(me);
       let inc = 0;
       for (const i of this.mine(me.id)) for (const b of this.plots[i].g) if (b && CAT[b.k]?.inc) inc += CAT[b.k].inc * RM[i >> 6];

@@ -62,21 +62,29 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
   <div class="box log" id="log"></div>
 </div>
 <div id="er" class="err hide"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 let ws,cat={},Q=[],RLV=[1,30,60],S=null,tab="base",sel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
 const HOST="wss://jang-kagazi.mohammad1392reza2931.workers.dev";
+let tries=0,connT=0,joined=false;
 function conn(){
-  ws=new WebSocket((location.hostname.endsWith("workers.dev")?location.origin.replace("http","ws"):HOST)+"/ws");
-  ws.onopen=()=>{$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)send({t:"join",id,name:localStorage.pwname})};
-  ws.onmessage=e=>{const m=JSON.parse(e.data);
+  clearTimeout(connT);
+  if(ws&&(ws.readyState===0||ws.readyState===1))return;
+  const url=(location.hostname.endsWith("workers.dev")?location.origin.replace("http","ws"):HOST)+"/ws";
+  const w=ws=new WebSocket(url);
+  $("#st").textContent="در حال اتصال به سرور..."+(tries?" (تلاش "+(tries+1)+")":"");
+  const fail=setTimeout(()=>{if(w.readyState===0)try{w.close()}catch{}},8000);
+  w.onopen=()=>{clearTimeout(fail);tries=0;$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)send({t:"join",id,name:localStorage.pwname})};
+  w.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}
     if(m.t==="cat"){cat=m.cat;Q=m.Q;RLV=m.RLV}
-    if(m.t==="err")toast(m.m);
+    if(m.t==="err"){toast(m.m);$("#st").textContent=m.m}
     if(m.t==="world"){wData=m;buildWorld()}
     if(m.t==="alert"){toast(m.m);beep(160,.3,"sawtooth");navigator.vibrate&&navigator.vibrate([80,40,80])}
-    if(m.t==="state"){S=m;$("#login").classList.add("hide");$("#game").classList.remove("hide");draw()}};
-  ws.onclose=()=>{$("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";setTimeout(conn,1500)};
+    if(m.t==="state"){S=m;joined=true;$("#login").classList.add("hide");$("#game").classList.remove("hide");try{draw()}catch(x){console.error(x)}}};
+  w.onerror=()=>{};
+  w.onclose=()=>{clearTimeout(fail);if(w!==ws)return;tries++;
+    $("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";
+    connT=setTimeout(conn,Math.min(1000*tries,5000))};
 }
 const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
 function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
@@ -279,6 +287,7 @@ function ally(p){
   $("#aj")&&($("#aj").onclick=()=>send({t:"ally",name:$("#an").value}));
 }
 conn();
+(function(){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";s.async=true;s.onerror=()=>console.warn("three.js load failed");document.head.appendChild(s)})();
 </script>
 </body>
 </html>
