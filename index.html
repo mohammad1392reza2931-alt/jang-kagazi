@@ -65,7 +65,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
 const $=s=>document.querySelector(s);
 let ws,cat={},S=null,tab="atk",wsel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
 function conn(){
-  ws=new WebSocket(location.origin.replace("http","ws")+"/ws");
+  ws=new WebSocket((location.hostname.endsWith("workers.dev")?location.origin.replace("http","ws"):"wss://jang-kagazi.mohammad1392reza2931.workers.dev")+"/ws");
   ws.onopen=()=>{$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)ws.send(JSON.stringify({t:"join",id,name:localStorage.pwname}))};
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.t==="cat")cat=m.cat;
