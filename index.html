@@ -84,7 +84,7 @@ $("#tabs").onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;draw()}};
 const ic=k=>k==="hq"?"🏰":cat[k]?.i||"?";
 function draw(){
   const me=S.me,own=S.map.map((m,i)=>m&&m[3]===id?i:-1).filter(i=>i>=0);
-  $("#who").textContent=me.name+" · "+rank(me.caps);$("#bn").disabled=Date.now()<(me.bonus||0);$("#caps").textContent=me.caps;$("#lvl").textContent=me.lv;$("#trp").textContent=me.tr;{const b0=20*(me.lv-1)**2,b1=20*me.lv**2;$("#xpb").style.width=Math.min(100,(me.xp-b0)/(b1-b0)*100)+"%"}$("#tr").textContent=me.traitor;$("#tk").textContent=me.tekke;
+  $("#who").textContent=me.name+" · "+rank(me.caps)+" · "+tier(me.lv);$("#bn").disabled=Date.now()<(me.bonus||0);$("#caps").textContent=me.caps;$("#lvl").textContent=me.lv;$("#trp").textContent=me.tr;{const b0=20*(me.lv-1)**2,b1=20*me.lv**2;$("#xpb").style.width=Math.min(100,(me.xp-b0)/(b1-b0)*100)+"%"}$("#tr").textContent=me.traitor;$("#tk").textContent=me.tekke;
   $("#inc").textContent=`درآمد: روزی ${me.inc} تکه (هر روز ۶۰ ثانیه) · ${own.length} زمین`+(me.ally?` · اتحاد «${me.ally}»`:"");
   const inv=Object.entries(me.inv).filter(([,v])=>v>0);
   if(!inv.some(([k])=>k===sel))sel=inv[0]?.[0]||null;
@@ -99,6 +99,7 @@ function draw(){
 }
 $("#inv").onclick=e=>{if(e.target.dataset.s){sel=e.target.dataset.s;draw()}};
 let rep_=false;
+const tier=l=>l>=60?"📄 کاغذ A4":l>=30?"📄 کاغذ ناپاره":l>=20?"📄 کاغذ معمولی":l>=10?"📄 کاغذ بی‌آب":"📄 کاغذ آبی";
 const rank=n=>n>=10?"فرمانده کل":n>=6?"سرلشکر":n>=3?"سرهنگ":n>=1?"سروان":"سرباز";
 $("#bn").onclick=()=>{send({t:"bonus"});beep(700)};
 function base(p,own){
