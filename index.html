@@ -93,8 +93,8 @@ const $=s=>document.querySelector(s);
 let ws,cat={},Q=[],RLV=[1,30,60],S=null,tab="base",sel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
 const HOST="wss://jang-kagazi.mohammad1392reza2931.workers.dev";
 let tries=0,connT=0,joined=false;
-function autoJoin(){if(localStorage.pwtok)send({t:"join",id,tok:localStorage.pwtok});else if(localStorage.pwname)send({t:"join",id})}
-let nag=0;
+function autoJoin(){if(localStorage.pwtok)send({t:"join",id,tok:localStorage.pwtok,dev});else if(localStorage.pwname)send({t:"join",id,dev})}
+let nag=0,banned=0;const dev=localStorage.pwdev||(localStorage.pwdev=crypto.randomUUID());
 function conn(){
   clearTimeout(connT);
   if(ws&&(ws.readyState===0||ws.readyState===1))return;
@@ -106,23 +106,24 @@ function conn(){
   w.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}
     if(m.t==="cat"){cat=m.cat;Q=m.Q;RLV=m.RLV}
     if(m.t==="err"){toast(m.m);$("#st").textContent=m.m;if(m.bad)localStorage.removeItem("pwtok")}
+    if(m.t==="banned"){banned=1;$("#game").classList.add("hide");$("#am").classList.add("hide");$("#login").classList.remove("hide");$("#st").textContent=m.m;toast(m.m)}
     if(m.t==="auth"){id=m.id;localStorage.pwid=id;localStorage.pwtok=m.tok;localStorage.pwname=m.name;$("#am").classList.add("hide")}
     if(m.t==="world"){wData=m;buildWorld()}
     if(m.t==="alert"){toast(m.m);beep(160,.3,"sawtooth");navigator.vibrate&&navigator.vibrate([80,40,80])}
     if(m.t==="state"){S=m;joined=true;$("#login").classList.add("hide");$("#game").classList.remove("hide");try{draw()}catch(x){console.error(x)}if(S.me.nopw&&!nag){nag=1;toast("حسابت رمز ندارد؛ از دکمهٔ 🔑 رمز بگذار")}}};
   w.onerror=()=>{};
-  w.onclose=()=>{clearTimeout(fail);if(w!==ws)return;tries++;
+  w.onclose=()=>{clearTimeout(fail);if(w!==ws||banned)return;tries++;
     $("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";
     connT=setTimeout(conn,Math.min(1000*tries,5000))};
 }
 const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
 function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
 const cr=()=>!ws||ws.readyState!==1?(toast("هنوز به سرور وصل نشدم"),0):1;
-$("#go").onclick=()=>{const n=$("#nm").value.trim(),p=$("#pw").value;if(!n||p.length<4)return toast("نام و رمز (حداقل ۴ نویسه) لازم است");if(cr())send({t:"reg",name:n,pw:p})};
+$("#go").onclick=()=>{const n=$("#nm").value.trim(),p=$("#pw").value;if(!n||p.length<4)return toast("نام و رمز (حداقل ۴ نویسه) لازم است");if(cr())send({t:"reg",name:n,pw:p,dev})};
 $("#toLogin").onclick=()=>{$("#reg").classList.add("hide");$("#lg").classList.remove("hide")};$("#toReg").onclick=()=>{$("#lg").classList.add("hide");$("#reg").classList.remove("hide")};
-$("#lgo").onclick=()=>{const n=$("#ln").value.trim(),p=$("#lp").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p})};
+$("#lgo").onclick=()=>{const n=$("#ln").value.trim(),p=$("#lp").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p,dev})};
 $("#acb").onclick=()=>{$("#npw").classList.toggle("hide",!(S&&S.me.nopw));$("#am").classList.remove("hide")};$("#ax").onclick=()=>$("#am").classList.add("hide");
-$("#alg").onclick=()=>{const n=$("#an2").value.trim(),p=$("#ap2").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p})};
+$("#alg").onclick=()=>{const n=$("#an2").value.trim(),p=$("#ap2").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p,dev})};
 $("#nps").onclick=()=>{const p=$("#np").value;if(p.length<4)return toast("رمز حداقل ۴ نویسه");if(cr())send({t:"setpw",pw:p})};
 $("#alo").onclick=()=>{["pwid","pwtok","pwname"].forEach(k=>localStorage.removeItem(k));location.reload()};
 $("#tabs").onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;draw()}};
@@ -139,7 +140,7 @@ function draw(){
   const showB=tab==="base"&&S.view,showM=tab==="map"&&S.me.lv>=RLV[realm];
   $("#stage").style.display=showB||showM?"block":"none";$("#stage").style.height=showM?"min(115vw,560px)":"min(80vw,400px)";
   mode=showM?"map":"base";if(showB)sync3d();if(showM)worldReq();
-  if(tab==="base")base(p,own);else if(tab==="map")map(p,own);else if(tab==="shop")shop(p);else if(tab==="ally")ally(p);else if(tab==="quest")quest(p);else if(tab==="emp")emp(p);else chat(p);
+  if(tab!=="adm")p.dataset.t="";if(tab==="base")base(p,own);else if(tab==="map")map(p,own);else if(tab==="shop")shop(p);else if(tab==="ally")ally(p);else if(tab==="quest")quest(p);else if(tab==="emp")emp(p);else chat(p);
   p.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>send({t:"view",i:+b.dataset.v}));
   p.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>send({t:"gift",to:b.dataset.g,a:100}));
   $("#log").innerHTML=S.log.map(l=>`<div>${l}</div>`).join("")||"هنوز اتفاقی نیفتاده.";
@@ -169,8 +170,9 @@ function onCell(c){
 }
 function chat(p){
   if(document.activeElement&&document.activeElement.id==="cx")return;
-  p.innerHTML=`<div style="display:flex;gap:6px"><input id="cx" maxlength="80" placeholder="پیام..." style="margin:0"><button id="cs">ارسال</button></div>`+S.chat.map(x=>`<div class="row"><span><b>${x.n}</b>${x.a?` <small style="display:inline">[${x.a}]</small>`:""}: ${x.x}</span></div>`).join("");
+  p.innerHTML=`<div style="display:flex;gap:6px"><input id="cx" maxlength="80" placeholder="پیام..." style="margin:0"><button id="cs">ارسال</button></div>`+S.chat.map(x=>`<div class="row"><span><b>${x.n}</b>${x.a?` <small style="display:inline">[${x.a}]</small>`:""}</span>${x.n===S.me.name?"":`<span style="white-space:nowrap"><button class="chip" data-rp="${x.m}">🚩 گزارش</button></span>`}</div>`).join("");
   $("#cs").onclick=()=>{const x=$("#cx").value;if(x)send({t:"chat",x})};
+  p.querySelectorAll("[data-rp]").forEach(b=>b.onclick=()=>send({t:"report",m:+b.dataset.rp}));
 }
 let AC;function beep(f,d=.1,ty="square"){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch{}}
 // ---------- سه‌بعدی ----------

@@ -75,13 +75,13 @@ export default {
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.P = {}; this.plots = {}; this.log = []; this.chat = []; this.evn = 0; this.ev = null; this.socks = new Map(); this.last = Date.now(); this.n = 0;
+    this.P = {}; this.B = { game: {}, chat: {}, dev: {}, ip: {}, rep: [], rn: 0 }; this.mid = 0; this.admins = new Set(); this.an = 0; this.plots = {}; this.log = []; this.chat = []; this.evn = 0; this.ev = null; this.socks = new Map(); this.last = Date.now(); this.n = 0;
     ctx.blockConcurrencyWhile(async () => {
       try {
         await this.env.DB.exec("CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL, updated INTEGER)");
         const { results } = await this.env.DB.prepare("SELECT id, data FROM players").all();
         for (const r of results) {
-          if (r.id === "__w") this.plots = JSON.parse(r.data); else this.P[r.id] = JSON.parse(r.data);
+          if (r.id === "__w") this.plots = JSON.parse(r.data); else if (r.id === "__b") this.B = { ...this.B, ...JSON.parse(r.data) }; else this.P[r.id] = JSON.parse(r.data);
         }
       } catch (e) { console.log("D1 init failed", e); this.dbErr = String(e); }
     });
@@ -91,10 +91,10 @@ export class GameRoom extends DurableObject {
   async fetch(req) {
     if (req.headers.get("Upgrade") !== "websocket") return new Response("ws only", { status: 400 });
     const [c, s] = Object.values(new WebSocketPair());
-    s.accept();
+    s.accept(); s.ip = req.headers.get("CF-Connecting-IP") || "";
     s.addEventListener("message", (e) => { try { this.onMsg(s, e.data); } catch (x) { console.log("onMsg error", x); try { this.err(s, "خطای سرور، دوباره تلاش کن"); } catch {} } });
     s.addEventListener("error", () => this.socks.delete(s));
-    s.addEventListener("close", () => this.socks.delete(s));
+    s.addEventListener("close", () => { this.socks.delete(s); this.admins.delete(s); });
     s.send(JSON.stringify({ t: "cat", cat: CAT, Q, RLV }));
     return new Response(null, { status: 101, webSocket: c });
   }
@@ -116,6 +116,9 @@ export class GameRoom extends DurableObject {
     if (!name) return this.err(ws, "نام کاربری لازم است");
     if (pw.length < 4 || pw.length > 64) return this.err(ws, "رمز باید ۴ تا ۶۴ نویسه باشد");
     let p = Object.values(this.P).find((x) => x.name === name);
+    ws.dev = String(m.dev || "").slice(0, 40);
+    const bn = this.isBanned(ws, p?.id);
+    if (bn) return this.banMsg(ws, bn);
     if (m.t === "reg") {
       const hp = await this.hash(pw);
       if (Object.values(this.P).some((x) => x.name === name)) return this.err(ws, "این نام قبلاً گرفته شده");
@@ -138,8 +141,70 @@ export class GameRoom extends DurableObject {
   }
   enter(ws, pp) {
     pp.lv ??= 1; pp.xp ??= 0; pp.tr ??= 0; pp.bp ??= 0; pp.bpc ??= 0; pp.emp ??= "امپراطوری " + pp.name; pp.king ??= pp.name; pp.reqs ??= [];
+    if (ws.dev && !(pp.devs ||= []).includes(ws.dev)) pp.devs = [...pp.devs, ws.dev].slice(-5);
+    pp.ip = ws.ip || pp.ip;
     this.socks.set(ws, { id: pp.id, view: this.mine(pp.id)[0] ?? null });
     this.save(); this.push(ws); this.push();
+  }
+
+  async alogin(ws, m) {
+    const bad = (x) => ws.send(JSON.stringify({ t: "aerr", m: x }));
+    if ((ws.fails || 0) >= 8) return bad("تلاش بیش از حد؛ صفحه را دوباره باز کن");
+    const p = Object.values(this.P).find((x) => x.name === clean(m.name).slice(0, 14));
+    const ok = this.isAdmin(p) && (await this.hash(String(m.pw || ""), p.pw.s)).h === p.pw.h;
+    if (!ok) { ws.fails = (ws.fails || 0) + 1; return bad("نام کاربری یا رمز مدیر اشتباه است"); }
+    ws.adm = true; this.admins.add(ws); this.pushAdm(ws);
+  }
+  pushAdm(only) {
+    if (!this.admins.size) return;
+    const B = this.B, on = new Set([...this.socks.values()].map((s) => s.id));
+    const msg = JSON.stringify({
+      t: "admstate", online: on.size,
+      pl: Object.values(this.P).map((p) => ({ n: p.name, lv: p.lv, t: Math.floor(p.tekke), a: p.ally, c: p.caps, l: this.mine(p.id).length, on: on.has(p.id), bg: !!B.game[p.id], bc: !!B.chat[p.id] })),
+      bg: Object.entries(B.game).map(([id, b]) => ({ id, n: b.name, w: b.why, t: b.t })),
+      bc: Object.entries(B.chat).map(([id, b]) => ({ id, n: b.name, w: b.why, t: b.t })),
+      rp: B.rep, chat: this.chat.map(({ id: _i, ...c }) => c),
+    });
+    for (const ws of only ? [only] : this.admins) try { ws.send(msg); } catch {}
+  }
+  isAdmin(p) { return !!p && !!p.pw && !!this.env.ADMIN_NAME && p.name === this.env.ADMIN_NAME; }
+  isBanned(ws, id) {
+    const B = this.B;
+    if (id && B.game[id]) return B.game[id];
+    const d = ws.dev && B.dev[ws.dev], i = ws.ip && B.ip[ws.ip];
+    return (d && B.game[d]) || (i && B.game[i]) || null;
+  }
+  banMsg(ws, b) {
+    try { ws.send(JSON.stringify({ t: "banned", m: "🚫 تو از بازی محروم شده‌ای" + (b.why ? " · دلیل: " + b.why : "") })); ws.close(1008, "banned"); } catch {}
+    this.socks.delete(ws);
+  }
+  ban(kind, p, why, ip) {
+    const B = this.B; B[kind][p.id] = { name: p.name, why, t: Date.now() };
+    if (kind === "game") {
+      for (const d of p.devs || []) B.dev[d] = p.id;
+      if (ip && p.ip) B.ip[p.ip] = p.id;
+      for (const [ws, s] of [...this.socks]) if (s.id === p.id) this.banMsg(ws, B.game[p.id]);
+    }
+    B.rep = B.rep.filter((r) => r.id !== p.id);
+  }
+  admin(ws, me, m) {
+    const B = this.B, tg = Object.values(this.P).find((p) => p.name === m.to);
+    if (m.t === "x_give") {
+      const a = Math.trunc(+m.a);
+      if (!tg || !a || Math.abs(a) > 1e9) return this.err(ws, "بازیکن یا مقدار نامعتبر");
+      tg.tekke = Math.max(0, tg.tekke + a);
+      this.alert(tg.id, a > 0 ? `🎁 مدیر ${a} تکه به تو داد` : `مدیر ${-a} تکه از تو کم کرد`);
+      this.err(ws, "انجام شد ✓");
+    } else if (m.t === "x_ban") {
+      if (!tg || this.isAdmin(tg)) return this.err(ws, "بازیکن نامعتبر");
+      this.ban(m.k === "chat" ? "chat" : "game", tg, clean(m.why).slice(0, 60), !!m.ip);
+      this.err(ws, "بن شد ✓");
+    } else if (m.t === "x_unban") {
+      const k = m.k === "chat" ? "chat" : "game", id = String(m.id);
+      delete B[k][id];
+      if (k === "game") for (const t of ["dev", "ip"]) for (const x of Object.keys(B[t])) if (B[t][x] === id) delete B[t][x];
+      this.err(ws, "رفع بن شد ✓");
+    } else if (m.t === "x_rej") B.rep = B.rep.filter((r) => r.r !== m.r);
   }
 
   xp(p, n) {
@@ -167,10 +232,15 @@ export class GameRoom extends DurableObject {
 
   onMsg(ws, raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
+    if (m.t === "alogin") return this.alogin(ws, m);
+    if (String(m.t).startsWith("x_")) { if (ws.adm) { this.admin(ws, null, m); this.save(); this.pushAdm(); } return; }
     if (m.t === "reg" || m.t === "login") return this.auth(ws, m);
     if (m.t === "join") {
       const p = this.P[String(m.id || "").slice(0, 40)];
       if (!p) return this.err(ws, "حساب پیدا نشد؛ ثبت‌نام کن یا وارد شو", 1);
+      ws.dev = String(m.dev || "").slice(0, 40);
+      const bn = this.isBanned(ws, p.id);
+      if (bn) return this.banMsg(ws, bn);
       if (p.pw && !(p.toks || []).includes(String(m.tok || ""))) return this.err(ws, "نشست منقضی شده؛ دوباره وارد شو", 1);
       return this.enter(ws, p);
     }
@@ -232,12 +302,23 @@ export class GameRoom extends DurableObject {
       me.tekke -= cost; b.hp = mx;
     } else if (m.t === "chat") {
       const x = clean(m.x).slice(0, 80);
-      if (x) { this.chat.unshift({ n: me.name, a: me.ally, x }); this.chat.length = Math.min(this.chat.length, 20); }
+      if (this.B.chat[me.id]) return this.err(ws, "تو از گفتگو محروم شده‌ای 🔇");
+      if (x) { this.chat.unshift({ n: me.name, a: me.ally, x, id: me.id, m: ++this.mid }); this.chat.length = Math.min(this.chat.length, 20); }
     } else if (m.t === "gift") {
       const to = Object.values(this.P).find((p) => p.name === m.to), a = Math.floor(+m.a);
       if (!to || to.id === me.id || !me.ally || to.ally !== me.ally || !(a > 0) || me.tekke < a) return this.err(ws, "هدیه فقط به هم‌پیمان و با تکه کافی");
       me.tekke -= a; to.tekke += a; this.say(`🎁 ${me.name} ${a} تکه به ${to.name} هدیه داد`);
     }
+    else if (m.t === "report") {
+      const c = this.chat.find((x) => x.m === m.m);
+      if (!c || c.id === me.id) return this.err(ws, "پیام پیدا نشد");
+      if (this.B.rep.some((r) => r.m === c.m && r.by === me.name)) return this.err(ws, "قبلاً گزارش دادی");
+      this.B.rep.push({ r: ++this.B.rn, m: c.m, id: c.id, n: c.n, x: c.x, by: me.name, t: Date.now() });
+      this.B.rep = this.B.rep.slice(-100);
+      const ad = Object.values(this.P).find((p) => this.isAdmin(p)); if (ad) this.alert(ad.id, "🚩 گزارش جدید در پنل مدیریت");
+      this.err(ws, "گزارش ثبت شد ✓");
+    }
+    else if (String(m.t).startsWith("x_")) { if (this.isAdmin(me)) this.admin(ws, me, m); else return; }
     else if (m.t === "ally") return this.err(ws, "برای اتحاد باید درخواست بدهی و طرف مقابل قبول کند");
     else if (m.t === "areq") {
       const to = Object.values(this.P).find((p) => p.name === m.to);
@@ -306,6 +387,7 @@ export class GameRoom extends DurableObject {
       for (const b of pl.g) if (b && CAT[b.k]?.inc) o.tekke += (CAT[b.k].inc * RM[pi >> 6] / DAY) * dt;
     }
     if (this.socks.size) { if (this.n % 2 === 0) this.push(); if (++this.n % 30 === 0) this.save(); }
+    if (this.admins.size && ++this.an % 2 === 0) this.pushAdm();
   }
 
   save() {
@@ -315,6 +397,7 @@ export class GameRoom extends DurableObject {
       const q = "INSERT INTO players (id,name,data,updated) VALUES (?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET name=?2,data=?3,updated=?4";
       const st = Object.values(this.P).map((p) => this.env.DB.prepare(q).bind(p.id, p.name, JSON.stringify(p), Date.now()));
       st.push(this.env.DB.prepare(q).bind("__w", "__w", JSON.stringify(this.plots), Date.now()));
+      st.push(this.env.DB.prepare(q).bind("__b", "__b", JSON.stringify(this.B), Date.now()));
       try { await this.env.DB.batch(st); } catch (e) { console.log("D1 save failed", e); }
     }, 3000);
   }
@@ -334,7 +417,7 @@ export class GameRoom extends DurableObject {
       let inc = 0;
       for (const i of this.mine(me.id)) for (const b of this.plots[i].g) if (b && CAT[b.k]?.inc) inc += CAT[b.k].inc * RM[i >> 6];
       try {
-        ws.send(JSON.stringify({ t: "state", me: { ...mm, nopw: !pw0, tekke: Math.floor(me.tekke), inc }, map, pub, log: this.log, view: pl ? { i: sk.view, o: pl.o, g: pl.g, sh: pl.sh || 0 } : null, chat: this.chat, ev: this.ev }));
+        ws.send(JSON.stringify({ t: "state", me: { ...mm, nopw: !pw0, admin: this.isAdmin(me), tekke: Math.floor(me.tekke), inc }, map, pub, log: this.log, view: pl ? { i: sk.view, o: pl.o, g: pl.g, sh: pl.sh || 0 } : null, chat: this.chat.map(({ id: _i, ...c }) => c), ev: this.ev, adm: this.isAdmin(me) ? { bg: Object.entries(this.B.game).map(([id, b]) => ({ id, n: b.name, w: b.why })), bc: Object.entries(this.B.chat).map(([id, b]) => ({ id, n: b.name, w: b.why })), rp: this.B.rep } : undefined }));
       } catch {}
     }
   }
