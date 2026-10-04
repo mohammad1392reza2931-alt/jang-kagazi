@@ -262,8 +262,9 @@ export class GameRoom extends DurableObject {
     }
     else if (m.t === "arej") me.reqs = (me.reqs || []).filter((x) => x.f !== m.f);
     else if (m.t === "setpw") return this.setpw(ws, me, m);
-    else if (m.t === "betray" && me.ally) {
-      this.say(`🗡️ ${me.name} به اتحاد «${me.ally}» خیانت کرد!`); me.ally = ""; me.traitor++;
+    else if (m.t === "betray" && !me.ally) return this.err(ws, "تو در هیچ اتحادی نیستی");
+    else if (m.t === "betray") {
+      this.say(`🗡️ ${me.name} به اتحاد «${me.ally}» خیانت کرد!`); me.ally = ""; me.traitor++; this.err(ws, "از اتحاد خارج شدی 🗡️");
     }
     this.save(); this.push();
   }

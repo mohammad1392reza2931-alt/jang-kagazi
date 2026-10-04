@@ -165,7 +165,7 @@ function onCell(c){
     else if(b&&b.k!=="hq")send({t:"pick",i:v.i,c});
     else if(!b&&it&&it.k!=="atk"){send({t:"place",i:v.i,c,k:sel});beep(500,.06)}
     else if(!b)toast("اول ساختمان یا دفاع از انبار انتخاب کن");
-  }else if(it?.k==="atk"){const mm=S.map[v.i];if(!(S.me.ally&&mm&&mm[2]===S.me.ally)||confirm("این بازیکن هم‌پیمان توست! حمله یعنی خیانت و لقب خائن. ادامه؟"))send({t:"atk",i:v.i,c,w:sel})}else toast("اول یک سلاح انتخاب کن");
+  }else if(it?.k==="atk"){const mm=S.map[v.i];if(!(S.me.ally&&mm&&mm[2]===S.me.ally)||(atkArm===v.i+":"+c&&Date.now()-atkT<5000))send({t:"atk",i:v.i,c,w:sel});else{atkArm=v.i+":"+c;atkT=Date.now();toast("⚠️ این هم‌پیمان توست! حمله یعنی خیانت. برای تأیید همین خانه را دوباره بزن")}}else toast("اول یک سلاح انتخاب کن");
 }
 function chat(p){
   if(document.activeElement&&document.activeElement.id==="cx")return;
@@ -348,13 +348,14 @@ function emp(p){
   $("#es").onclick=()=>send({t:"prof",emp:$("#ei").value,king:$("#ki").value});
   $("#cs2")&&($("#cs2").onclick=()=>send({t:"name",i:v.i,nm:$("#ci").value}));
 }
+let betArm=0,atkArm="",atkT=0;
 function ally(p){
   const me=S.me;
   const rq=(me.reqs||[]).map(r=>`<div class="row"><div>🤝 ${r.f}<small>درخواست اتحاد داده</small></div><span><button data-ac="${r.f}">قبول</button> <button data-rj="${r.f}" style="background:var(--red)">رد</button></span></div>`).join("");
-  p.innerHTML=(me.ally?`<div class="row"><b>اتحاد «${me.ally}»</b><button id="bt" style="background:var(--red)">🗡️ خیانت و خروج</button></div><div class="sub">هم‌پیمان‌ها نمی‌توانند به هم حمله کنند. اولین حمله به هم‌پیمان خیانت حساب می‌شود و لقب خائن می‌گیری.</div>`:`<div class="sub">برای اتحاد، به یک فرمانده درخواست بده تا قبول کند.</div>`)+
+  p.innerHTML=(me.ally?`<div class="row"><b>اتحاد «${me.ally}»</b><button id="bt" style="background:var(--red)">${Date.now()-betArm<4000?"⚠️ تأیید خیانت و خروج":"🗡️ خیانت و خروج"}</button></div><div class="sub">هم‌پیمان‌ها نمی‌توانند به هم حمله کنند. اولین حمله به هم‌پیمان خیانت حساب می‌شود و لقب خائن می‌گیری.</div>`:`<div class="sub">برای اتحاد، به یک فرمانده درخواست بده تا قبول کند.</div>`)+
    (rq?`<div style="margin-top:10px"><b>درخواست‌های دریافتی</b></div>${rq}`:"")+
    `<div style="margin-top:10px"><b>فرمانده‌ها</b></div>`+S.pub.sort((a,b)=>b.caps-a.caps).map(x=>`<div class="row"><div>${x.name}${x.tr?" 🗡️"+x.tr:""}<small>${x.ally?"اتحاد «"+x.ally+"»":"بدون اتحاد"} · ${x.n} زمین</small></div><span>${rank(x.caps)} 🏴 ${x.caps} ${me.ally&&x.ally===me.ally&&x.name!==me.name?`<button class="chip" data-g="${x.name}">🎁 ۱۰۰</button>`:x.name!==me.name&&!(me.ally&&x.ally)?`<button class="chip" data-ar="${x.name}">🤝 درخواست اتحاد</button>`:""}</span></div>`).join("");
-  $("#bt")&&($("#bt").onclick=()=>confirm("مطمئنی؟ همه می‌فهمند خیانت کردی")&&send({t:"betray"}));
+  $("#bt")&&($("#bt").onclick=()=>{if(Date.now()-betArm<4000){betArm=0;send({t:"betray"})}else{betArm=Date.now();toast("برای تأیید خیانت دوباره بزن");draw()}});
   p.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>send({t:"areq",to:b.dataset.ar}));
   p.querySelectorAll("[data-ac]").forEach(b=>b.onclick=()=>send({t:"aacc",f:b.dataset.ac}));
   p.querySelectorAll("[data-rj]").forEach(b=>b.onclick=()=>send({t:"arej",f:b.dataset.rj}));
