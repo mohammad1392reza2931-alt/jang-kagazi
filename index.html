@@ -170,7 +170,7 @@ function onCell(c){
 }
 function chat(p){
   if(document.activeElement&&document.activeElement.id==="cx")return;
-  p.innerHTML=`<div style="display:flex;gap:6px"><input id="cx" maxlength="80" placeholder="پیام..." style="margin:0"><button id="cs">ارسال</button></div>`+S.chat.map(x=>`<div class="row"><span><b>${x.n}</b>${x.a?` <small style="display:inline">[${x.a}]</small>`:""}</span>${x.n===S.me.name?"":`<span style="white-space:nowrap"><button class="chip" data-rp="${x.m}">🚩 گزارش</button></span>`}</div>`).join("");
+  p.innerHTML=`<div style="display:flex;gap:6px"><input id="cx" maxlength="80" placeholder="پیام..." style="margin:0"><button id="cs">ارسال</button></div>`+S.chat.map(x=>`<div class="row"><span><b>${x.n}</b>${x.a?` <small style="display:inline">[${x.a}]</small>`:""}<br><span style="word-break:break-word">${x.x||""}</span></span>${x.n===S.me.name?"":`<span style="white-space:nowrap"><button class="chip" data-rp="${x.m}">🚩 گزارش</button></span>`}</div>`).join("");
   $("#cs").onclick=()=>{const x=$("#cx").value;if(x)send({t:"chat",x})};
   p.querySelectorAll("[data-rp]").forEach(b=>b.onclick=()=>send({t:"report",m:+b.dataset.rp}));
 }
