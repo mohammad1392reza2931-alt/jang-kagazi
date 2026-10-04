@@ -34,15 +34,36 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
 .row small{display:block;opacity:.7;font-size:12px}
 .log{font-size:12.5px;line-height:1.9}
 .err{position:fixed;bottom:16px;left:12px;right:12px;max-width:520px;margin:auto;background:var(--red);color:#fff;padding:10px;border-radius:10px;text-align:center}
-.hide{display:none}
+.hide{display:none!important}
+#hb{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;z-index:50;background:var(--gold);color:var(--ink);font-weight:900;border:2px solid var(--ink);box-shadow:0 2px 0 var(--ink)}
+#hm,#am{position:fixed;inset:0;z-index:60;background:rgba(27,47,91,.55);display:flex;align-items:flex-end;justify-content:center}
+#hm>div,#am>div{background:#fffefa;width:100%;max-width:640px;max-height:92%;overflow:auto;border:2px solid var(--ink);border-radius:16px 16px 0 0;padding:12px;font-size:14px;line-height:1.9}
+#hm details{border:1px solid var(--line);border-radius:8px;margin:6px 0;padding:4px 8px;background:#fff}
+#hm summary{font-weight:900;cursor:pointer;padding:4px 0}
+#hm table{width:100%;border-collapse:collapse;font-size:13px}#hm td,#hm th{border:1px solid var(--line);padding:3px 5px;text-align:right}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--ink);vertical-align:middle;margin-left:4px}
+#hm p{margin:4px 0}
 </style>
 </head>
 <body>
+<button id="hb">❓ راهنما</button>
 <h1>جنگ کاغذی</h1>
 <div id="login" class="box">
-  <b>اسم فرمانده‌ات چیه؟</b>
-  <input id="nm" maxlength="14" placeholder="مثلاً: کاغذ‌خان">
-  <button id="go">ورود به جنگ</button>
+  <div id="reg">
+    <b style="font-size:20px">ثبت نام</b>
+    <input id="nm" maxlength="14" placeholder="نام کاربری (مثلاً: کاغذ‌خان)" autocomplete="username">
+    <input id="pw" type="password" maxlength="64" placeholder="رمز (حداقل ۴ نویسه)" autocomplete="new-password">
+    <button id="go">ثبت نام و ورود به جنگ</button>
+    <div class="sub" style="margin-top:14px">از قبل حساب داری؟</div>
+    <button id="toLogin" class="chip" style="margin-top:4px">ورود</button>
+  </div>
+  <div id="lg" class="hide">
+    <b style="font-size:20px">ورود</b>
+    <input id="ln" maxlength="14" placeholder="نام کاربری" autocomplete="username">
+    <input id="lp" type="password" maxlength="64" placeholder="رمز" autocomplete="current-password">
+    <button id="lgo">ورود</button>
+    <button id="toReg" class="chip" style="margin-top:8px">حساب نداری؟ ثبت نام</button>
+  </div>
   <div class="sub" id="st" style="margin-top:8px">در حال اتصال به سرور...</div>
 </div>
 <div id="game" class="hide">
@@ -52,7 +73,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
     <div class="bar"><i id="xpb" style="width:0"></i></div>
     <div class="sub" id="inc"></div>
     <div class="chips" id="inv"></div>
-    <button id="bn" class="chip" style="margin-top:8px">🎁 پاداش ورود</button>
+    <button id="acb" class="chip" style="margin-top:8px">🔑 حساب / ورود به حساب قدیمی</button> <button id="bn" class="chip" style="margin-top:8px">🎁 پاداش ورود</button>
   </div>
   <div class="tabs" id="tabs">
     <button data-t="base">زمین</button><button data-t="map">نقشه</button><button data-t="shop">فروشگاه</button><button data-t="ally">اتحاد</button><button data-t="chat">گفتگو</button><button data-t="quest">ماموریت</button><button data-t="emp">امپراطوری</button>
@@ -61,12 +82,19 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
   <div id="p" class="box"></div>
   <div class="box log" id="log"></div>
 </div>
+<div id="hm" class="hide"><div><div class="top"><b style="font-size:18px">📖 راهنمای کامل جنگ کاغذی</b><button id="hx">✕ بستن</button></div><div id="hc"></div></div></div>
+<div id="am" class="hide"><div><div class="top"><b>🔑 حساب کاربری</b><button id="ax">✕ بستن</button></div>
+<p class="sub">ورود به حساب قدیمی (نام کاربری و رمز):</p><input id="an2" maxlength="14" placeholder="نام کاربری"><input id="ap2" type="password" maxlength="64" placeholder="رمز"><button id="alg">ورود به این حساب</button>
+<div id="npw" class="hide"><hr style="margin:12px 0"><p class="sub">حساب فعلی‌ات رمز ندارد. رمز بگذار تا از هر دستگاهی بتوانی وارد شوی:</p><input id="np" type="password" maxlength="64" placeholder="رمز جدید (حداقل ۴ نویسه)"><button id="nps">ذخیره رمز</button></div>
+<hr style="margin:12px 0"><button id="alo" style="background:var(--red)">خروج از این حساب</button></div></div>
 <div id="er" class="err hide"></div>
 <script>
 const $=s=>document.querySelector(s);
 let ws,cat={},Q=[],RLV=[1,30,60],S=null,tab="base",sel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
 const HOST="wss://jang-kagazi.mohammad1392reza2931.workers.dev";
 let tries=0,connT=0,joined=false;
+function autoJoin(){if(localStorage.pwtok)send({t:"join",id,tok:localStorage.pwtok});else if(localStorage.pwname)send({t:"join",id})}
+let nag=0;
 function conn(){
   clearTimeout(connT);
   if(ws&&(ws.readyState===0||ws.readyState===1))return;
@@ -74,13 +102,14 @@ function conn(){
   const w=ws=new WebSocket(url);
   $("#st").textContent="در حال اتصال به سرور..."+(tries?" (تلاش "+(tries+1)+")":"");
   const fail=setTimeout(()=>{if(w.readyState===0)try{w.close()}catch{}},8000);
-  w.onopen=()=>{clearTimeout(fail);tries=0;$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)send({t:"join",id,name:localStorage.pwname})};
+  w.onopen=()=>{clearTimeout(fail);tries=0;$("#st").textContent="به سرور وصل شد ✓";autoJoin()};
   w.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}
     if(m.t==="cat"){cat=m.cat;Q=m.Q;RLV=m.RLV}
-    if(m.t==="err"){toast(m.m);$("#st").textContent=m.m}
+    if(m.t==="err"){toast(m.m);$("#st").textContent=m.m;if(m.bad)localStorage.removeItem("pwtok")}
+    if(m.t==="auth"){id=m.id;localStorage.pwid=id;localStorage.pwtok=m.tok;localStorage.pwname=m.name;$("#am").classList.add("hide")}
     if(m.t==="world"){wData=m;buildWorld()}
     if(m.t==="alert"){toast(m.m);beep(160,.3,"sawtooth");navigator.vibrate&&navigator.vibrate([80,40,80])}
-    if(m.t==="state"){S=m;joined=true;$("#login").classList.add("hide");$("#game").classList.remove("hide");try{draw()}catch(x){console.error(x)}}};
+    if(m.t==="state"){S=m;joined=true;$("#login").classList.add("hide");$("#game").classList.remove("hide");try{draw()}catch(x){console.error(x)}if(S.me.nopw&&!nag){nag=1;toast("حسابت رمز ندارد؛ از دکمهٔ 🔑 رمز بگذار")}}};
   w.onerror=()=>{};
   w.onclose=()=>{clearTimeout(fail);if(w!==ws)return;tries++;
     $("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";
@@ -88,7 +117,14 @@ function conn(){
 }
 const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
 function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
-$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;if(ws.readyState!==1)return toast("هنوز به سرور وصل نشدم");localStorage.pwname=n;send({t:"join",id,name:n})};
+const cr=()=>!ws||ws.readyState!==1?(toast("هنوز به سرور وصل نشدم"),0):1;
+$("#go").onclick=()=>{const n=$("#nm").value.trim(),p=$("#pw").value;if(!n||p.length<4)return toast("نام و رمز (حداقل ۴ نویسه) لازم است");if(cr())send({t:"reg",name:n,pw:p})};
+$("#toLogin").onclick=()=>{$("#reg").classList.add("hide");$("#lg").classList.remove("hide")};$("#toReg").onclick=()=>{$("#lg").classList.add("hide");$("#reg").classList.remove("hide")};
+$("#lgo").onclick=()=>{const n=$("#ln").value.trim(),p=$("#lp").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p})};
+$("#acb").onclick=()=>{$("#npw").classList.toggle("hide",!(S&&S.me.nopw));$("#am").classList.remove("hide")};$("#ax").onclick=()=>$("#am").classList.add("hide");
+$("#alg").onclick=()=>{const n=$("#an2").value.trim(),p=$("#ap2").value;if(!n||!p)return toast("نام کاربری و رمز را بنویس");if(cr())send({t:"login",name:n,pw:p})};
+$("#nps").onclick=()=>{const p=$("#np").value;if(p.length<4)return toast("رمز حداقل ۴ نویسه");if(cr())send({t:"setpw",pw:p})};
+$("#alo").onclick=()=>{["pwid","pwtok","pwname"].forEach(k=>localStorage.removeItem(k));location.reload()};
 $("#tabs").onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;draw()}};
 const ic=k=>k==="hq"?"🏰":cat[k]?.i||"?";
 function draw(){
@@ -129,7 +165,7 @@ function onCell(c){
     else if(b&&b.k!=="hq")send({t:"pick",i:v.i,c});
     else if(!b&&it&&it.k!=="atk"){send({t:"place",i:v.i,c,k:sel});beep(500,.06)}
     else if(!b)toast("اول ساختمان یا دفاع از انبار انتخاب کن");
-  }else if(it?.k==="atk")send({t:"atk",i:v.i,c,w:sel});else toast("اول یک سلاح انتخاب کن");
+  }else if(it?.k==="atk"){const mm=S.map[v.i];if(!(S.me.ally&&mm&&mm[2]===S.me.ally)||confirm("این بازیکن هم‌پیمان توست! حمله یعنی خیانت و لقب خائن. ادامه؟"))send({t:"atk",i:v.i,c,w:sel})}else toast("اول یک سلاح انتخاب کن");
 }
 function chat(p){
   if(document.activeElement&&document.activeElement.id==="cx")return;
@@ -139,27 +175,57 @@ function chat(p){
 let AC;function beep(f,d=.1,ty="square"){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch{}}
 // ---------- سه‌بعدی ----------
 const COL={cardcastle:0xd9b382,pencil:0xf5d142,ruler:0xaaaaaa,tape:0xe8e0a0,stapwall:0x888888,book:0x3a6ea5,marker:0xdd4477,ink:0x222244,dome:0x99ddee,vault:0x555555,pencil_mine:0xf5d142,printer:0xbbbbbb,library:0xd8c4a0,tekke_bank:0xf2c14e,a4_factory:0xffffff,diamond_wall:0x7fe8ff,gold_mine:0xf2c14e,hq:0xf2c14e,handk:0xffffff,thread:0x8fb8de,ped:0x9b8cf2,wall:0x2f6fd0,eraser:0xf29bb0,clip:0xb0b7c3,card:0xfff1c1,paper_s:0xfafafa,paper_m:0xdfe4ff};
-let wsc,wcam,wsun,wmesh,wplots=[],wlabels=[],wData=null,wRealm=-1,wTimer=0,mode="base",mt={x:35,z:35,d:70},lc={},R,sc,cam,sun,cells={},tiles=[],curI=null,fx=[],lastEv=-1,th=.8,ph=.95,dist=13,ptrs=new Map(),moved=0;
+let wroof,wsc,wcam,wsun,wmesh,wplots=[],wlabels=[],wData=null,wRealm=-1,wTimer=0,mode="base",mt={x:35,z:35,d:70},lc={},R,sc,cam,sun,cells={},tiles=[],curI=null,fx=[],lastEv=-1,th=.8,ph=.95,dist=13,ptrs=new Map(),moved=0;
 function mk(k){
-  const g=new THREE.Group(),M=new THREE.MeshLambertMaterial({color:COL[k]||0xcccccc});
-  const bx=(w,h,d,y,m=M,x=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y+h/2,0);g.add(o)};
-  if(k==="hq"){bx(.9,.9,.9,0);const r=new THREE.Mesh(new THREE.ConeGeometry(.8,.7,4),new THREE.MeshLambertMaterial({color:0xd4474f}));r.position.y=1.25;r.rotation.y=Math.PI/4;g.add(r)}
-  else if(k==="wall")bx(.95,.8,.3,0);else if(k==="handk")bx(.7,.15,.7,0);else if(k==="eraser")bx(.9,.5,.5,0);
-  else if(k==="ped"){bx(.2,.8,.2,0);bx(.7,.1,.7,.8)}else if(k==="thread"||k==="clip"){bx(.9,.06,.06,.4);bx(.08,.45,.08,0,M,-.4);bx(.08,.45,.08,0,M,.4)}
-  else if(k==="card")bx(.7,.6,.06,0);else if(k==="paper_s")bx(.8,.5,.8,0);else if(k==="paper_m")bx(.8,.9,.8,0);else if(cat[k]?.k==="inc")bx(.85,.8,.85,0);else bx(.7,.7,.7,0);
+  const g=new THREE.Group(),C=COL[k]||0xcccccc,met=/vault|ruler|stapwall|marker/.test(k)?.55:.05,
+  M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.65,metalness:met}),
+  ad=(geo,c,x,y,z,m)=>{const o=new THREE.Mesh(geo,m||M(c));o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o},
+  bx=(w,h,d,y,c=C,x=0,z=0)=>ad(new THREE.BoxGeometry(w,h,d),c,x,y+h/2,z),
+  cy=(a,b,h,y,c=C,x=0,z=0,s=14)=>ad(new THREE.CylinderGeometry(a,b,h,s),c,x,y+h/2,z),
+  co=(r,h,y,c,x=0,z=0,s=14)=>ad(new THREE.ConeGeometry(r,h,s),c,x,y+h/2,z),
+  tw=(x,z,c=C,r=.13,h=.9,rc=0xb23a48)=>{cy(r,r,h,0,c,x,z);co(r*1.4,.3,h,rc,x,z)},kd=cat[k]?.k;
+  if(k==="hq"){bx(1.15,.25,1.15,0,0xc9a45c);bx(.7,.8,.7,.25);[[-.45,-.45],[.45,-.45],[-.45,.45],[.45,.45]].forEach(([x,z])=>tw(x,z,0xe3c36e,.12,.85));co(.5,.55,1.05,0xd4474f,0,0,4).rotation.y=Math.PI/4;cy(.015,.015,.5,1.5,0x444444);bx(.3,.18,.02,1.8,0xd4474f,.16)}
+  else if(k==="cardcastle"){bx(.95,.55,.95,0);[[-.4,-.4],[.4,-.4],[-.4,.4],[.4,.4]].forEach(([x,z])=>tw(x,z,0xc9a06c,.14,.8));bx(.25,.35,.05,0,0x4a3320,0,.48)}
+  else if(k==="pencil"){cy(.17,.17,.85,0,0xf5d142,0,0,6);co(.17,.35,.85,0xe8c08a,0,0,6);co(.05,.12,1.1,0x333333,0,0,6)}
+  else if(k==="ruler"){bx(.14,1.25,.7,0);for(let i=0;i<6;i++)bx(.16,.02,.2,.15+i*.2,0x222222)}
+  else if(k==="wall"){bx(.95,.75,.3,0);for(let i=-1;i<2;i++)bx(.22,.15,.32,.75,C,i*.34)}
+  else if(k==="handk"){for(let i=0;i<4;i++)bx(.7,.06,.7,i*.06,0xffffff-i*0x080808,0,0).rotation.y=i*.35}
+  else if(k==="thread"||k==="clip"){[-.42,.42].forEach(x=>bx(.07,.5,.07,0,0x555555,x));for(let i=0;i<3;i++)bx(.9,.025,.025,.12+i*.14,C);for(let i=-2;i<3;i++)bx(.02,.12,.02,.4,0x888888,i*.17)}
+  else if(k==="ped"){cy(.07,.1,.6,0,0x666677);cy(.42,.12,.14,.6,C,0,0,20).rotation.z=.25;cy(.02,.02,.4,.7,0xcccccc,.2)}
+  else if(k==="eraser"){bx(.9,.5,.55,0,0xf29bb0);bx(.35,.52,.57,0,0x3a6ea5)}
+  else if(k==="card"){bx(.75,.6,.06,0,0xfff1c1);bx(.77,.05,.08,.58,0xc9a06c)}
+  else if(k==="tape"){ad(new THREE.TorusGeometry(.3,.12,10,20),C,0,.15,0).rotation.x=Math.PI/2}
+  else if(k==="stapwall"){bx(.95,.7,.35,0);for(let i=-1;i<2;i++)cy(.06,.06,.04,.7,0xcccccc,i*.3,.12,8)}
+  else if(k==="book"){bx(.85,.18,.6,0,0x3a6ea5);bx(.8,.16,.55,.18,0xd4474f);bx(.75,.16,.5,.34,0x2f8f5b)}
+  else if(k==="marker"){cy(.15,.15,.9,0,C,0,0,10);co(.15,.3,.9,0x222222,0,0,10);cy(.17,.17,.1,0,0x222222)}
+  else if(k==="ink"){cy(.45,.45,.1,0,0x15183a,0,0,24);cy(.2,.2,.12,.1,0x2b3a8a,0,0,18)}
+  else if(k==="dome"){bx(.9,.1,.9,0,0x777777);ad(new THREE.SphereGeometry(.45,18,12,0,6.3,0,1.57),0,0,.1,0,new THREE.MeshStandardMaterial({color:C,transparent:true,opacity:.55,roughness:.1}))}
+  else if(k==="vault"){bx(.9,.8,.8,0);cy(.22,.22,.05,.2,0xcccccc,0,.42,16).rotation.x=Math.PI/2;bx(.05,.3,.05,.3,0xffd34d,0,.46)}
+  else if(k==="diamond_wall"){bx(.9,.8,.35,0);co(.14,.25,.8,0xbff4ff,-.3,0,4);co(.14,.25,.8,0xbff4ff,.3,0,4)}
+  else if(k==="pencil_mine"||k==="gold_mine"){co(.5,.75,0,k==="gold_mine"?0x7a6a4a:0x8b6a4a,0,0,7);bx(.25,.3,.1,0,0x2b2218,0,.4);for(let i=0;i<3;i++)bx(.1,.1,.1,0,C,-.5+i*.25,.55)}
+  else if(k==="printer"){bx(.9,.5,.7,0,0xdddddd);bx(.7,.12,.5,.5,0xffffff);bx(.5,.05,.3,.62,0xffffff,0,.3)}
+  else if(k==="library"){bx(.95,.12,.8,0,0xbbb);for(let i=-2;i<3;i++)cy(.07,.07,.6,.12,0xf2ead8,i*.2,.28,8);bx(.95,.12,.8,.72,C);co(.7,.3,.84,0xa65a4a,0,0,3).rotation.y=Math.PI}
+  else if(k==="tekke_bank"){bx(.95,.12,.8,0,0xbbb);for(let i=-1;i<2;i++)cy(.08,.08,.55,.12,0xfff3c4,i*.3,.28,8);bx(.95,.1,.8,.67,C);cy(.01,.3,.3,.77,0xf2c14e,0,0,4)}
+  else if(k==="a4_factory"||k==="paper_s"||k==="paper_m"){const t=k==="paper_s"?.5:.8;bx(.85,t,.75,0,C);cy(.1,.1,.4,t,0x888888,-.25,.1);cy(.1,.1,.55,t,0x888888,.05,.1);bx(.9,.06,.8,t,0xd4474f)}
+  else if(kd==="inc"){bx(.85,.8,.85,0);co(.6,.3,.8,0xd4474f,0,0,4).rotation.y=.78}
+  else if(kd==="def")bx(.8,.7,.8,0);
+  else bx(.7,.7,.7,0);
   return g;
 }
 const P3=c=>[c%8-3.5,Math.floor(c/8)-3.5];
 function init3d(){
   if(R||!window.THREE)return;
-  const st=$("#stage");R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));st.appendChild(R.domElement);
+  const st=$("#stage");R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.outputEncoding=THREE.sRGBEncoding;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;st.appendChild(R.domElement);
+  const pt=n=>{const cv=document.createElement("canvas");cv.width=cv.height=256;const x=cv.getContext("2d");x.fillStyle="#f7f4ea";x.fillRect(0,0,256,256);x.strokeStyle="#bcd3ee";x.lineWidth=2;for(let i=0;i<256;i+=32){x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.moveTo(i,0);x.lineTo(i,256);x.stroke()}const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(n,n);t.anisotropy=8;return t};
+  const sh=(l,r,mp)=>{l.castShadow=true;l.shadow.mapSize.set(mp,mp);const c=l.shadow.camera;c.left=c.bottom=-r;c.right=c.top=r;c.near=1;c.far=200;c.updateProjectionMatrix();l.shadow.bias=-.0006};
   sc=new THREE.Scene();sc.background=new THREE.Color(0xbfd9f5);cam=new THREE.PerspectiveCamera(45,1,.1,100);
-  sc.add(new THREE.AmbientLight(0xffffff,.7));sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(5,10,4);sc.add(sun);
-  const gr=new THREE.Mesh(new THREE.BoxGeometry(30,.2,30),new THREE.MeshLambertMaterial({color:0x7fae7a}));gr.position.y=-.2;sc.add(gr);
+  sc.add(new THREE.HemisphereLight(0xffffff,0x9aa8c0,.55));sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(5,10,4);sh(sun,8,2048);sc.add(sun);
+  const gr=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({map:pt(10),roughness:1}));gr.rotation.x=-Math.PI/2;gr.position.y=-.1;gr.receiveShadow=true;sc.add(gr);
+  [[0,-4.15,8.6,.3],[0,4.15,8.6,.3],[-4.15,0,.3,8.6],[4.15,0,.3,8.6]].forEach(([x,z,w,d])=>{const f=new THREE.Mesh(new THREE.BoxGeometry(w,.3,d),new THREE.MeshStandardMaterial({color:0x9b7448,roughness:.8}));f.position.set(x,0,z);f.castShadow=f.receiveShadow=true;sc.add(f)});
   wsc=new THREE.Scene();wsc.background=new THREE.Color(0xbfd9f5);wcam=new THREE.PerspectiveCamera(50,1,.5,400);
-  wsc.add(new THREE.AmbientLight(0xffffff,.75));wsun=new THREE.DirectionalLight(0xffffff,.8);wsun.position.set(30,60,40);wsc.add(wsun);
-  const wg=new THREE.Mesh(new THREE.BoxGeometry(400,.2,400),new THREE.MeshLambertMaterial({color:0x6f9a6a}));wg.position.set(35,-.3,35);wsc.add(wg);
-  for(let c=0;c<64;c++){const[x,z]=P3(c);const t=new THREE.Mesh(new THREE.BoxGeometry(.96,.1,.96),new THREE.MeshLambertMaterial({color:(c%8+Math.floor(c/8))%2?0xf4f1e6:0xe3ecf8}));t.position.set(x,-.05,z);t.userData.c=c;sc.add(t);tiles.push(t)}
+  wsc.add(new THREE.HemisphereLight(0xffffff,0x9aa8c0,.6));wsun=new THREE.DirectionalLight(0xffffff,.8);wsun.position.set(70,80,85);wsun.target.position.set(35,0,35);sh(wsun,70,4096);wsc.add(wsun,wsun.target);
+  const wg=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshStandardMaterial({map:pt(80),roughness:1}));wg.rotation.x=-Math.PI/2;wg.position.set(35,-.2,35);wg.receiveShadow=true;wsc.add(wg);
+  for(let c=0;c<64;c++){const[x,z]=P3(c);const t=new THREE.Mesh(new THREE.BoxGeometry(.96,.1,.96),new THREE.MeshStandardMaterial({color:(c%8+Math.floor(c/8))%2?0xf4f1e6:0xdbe8f8,roughness:.9}));t.position.set(x,-.05,z);t.receiveShadow=true;t.userData.c=c;sc.add(t);tiles.push(t)}
   const el=R.domElement;
   el.onpointerdown=e=>{el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);moved=0};
   const zm=f=>{if(mode==="map")mt.d=Math.min(140,Math.max(14,mt.d*f));else dist=Math.min(24,Math.max(6,dist*f))};
@@ -183,27 +249,31 @@ function tap(e){
 }
 function fit(){const st=$("#stage"),w=st.clientWidth,h=st.clientHeight;if(!w)return;if(R.domElement.clientWidth!==w||R.domElement.clientHeight!==h){R.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}}
 function worldReq(){init3d();if(!R)return;fit();const now=Date.now();if(now-wTimer>3000||wRealm!==realm){wTimer=now;wRealm=realm;send({t:"world",r:realm})}}
-function lab(t,s){const k=t+"|"+s;if(!lc[k]){const cv=document.createElement("canvas");cv.width=256;cv.height=64;const x=cv.getContext("2d");x.fillStyle="rgba(255,255,255,.88)";x.fillRect(0,0,256,64);x.fillStyle="#1b2f5b";x.textAlign="center";x.font="bold 26px Tahoma,sans-serif";x.fillText(t,128,28);x.font="17px Tahoma,sans-serif";x.fillText(s,128,54);lc[k]=new THREE.CanvasTexture(cv)}
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:lc[k]}));sp.scale.set(7,1.75,1);return sp}
+function lab(t,s,col="#1b2f5b"){const k=t+"|"+s+col;if(!lc[k]){const cv=document.createElement("canvas");cv.width=512;cv.height=128;const x=cv.getContext("2d");x.fillStyle="rgba(255,255,255,.92)";x.beginPath();x.roundRect?x.roundRect(4,4,504,120,22):x.rect(4,4,504,120);x.fill();x.lineWidth=7;x.strokeStyle=col;x.stroke();x.fillStyle="#1b2f5b";x.textAlign="center";x.font="bold 52px Vazirmatn,Tahoma,sans-serif";x.fillText(t,256,58);x.font="34px Vazirmatn,Tahoma,sans-serif";x.fillText(s,256,104);const tx=new THREE.CanvasTexture(cv);tx.anisotropy=8;lc[k]=tx}
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:lc[k],depthTest:false}));sp.renderOrder=9;sp.scale.set(7,1.75,1);return sp}
 function buildWorld(){
   if(!wsc||!wData||wData.r!==realm||!S)return;
-  if(wmesh){wsc.remove(wmesh);wmesh.geometry.dispose();wmesh.material.dispose()}
+  [wmesh,wroof].forEach(m=>{if(m){wsc.remove(m);m.geometry.dispose();m.material.dispose()}});
   wplots.forEach(m=>{wsc.remove(m);m.geometry.dispose();m.material.dispose()});wplots=[];wlabels.forEach(s=>{wsc.remove(s);s.material.dispose()});wlabels=[];
-  const keys=["hq",...Object.keys(cat)];let n=0;Object.values(wData.p).forEach(a=>n+=a.length);
-  wmesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial(),Math.max(1,n));
-  const dm=new THREE.Object3D(),col=new THREE.Color(),CL={fr:0x8fc08a,me:0x7fa8e8,al:0xe8d27f,en:0xe89a9f};let q=0;
+  const keys=["hq",...Object.keys(cat)];let n=0,nr=0;Object.values(wData.p).forEach(a=>a.forEach(([,ki])=>{n++;if(ki===0||cat[keys[ki]]?.k==="inc")nr++}));
+  wmesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({roughness:.7}),Math.max(1,n));
+  wroof=new THREE.InstancedMesh(new THREE.ConeGeometry(.62,1,4),new THREE.MeshStandardMaterial({roughness:.6}),Math.max(1,nr));
+  wmesh.castShadow=wmesh.receiveShadow=wroof.castShadow=true;
+  const dm=new THREE.Object3D(),col=new THREE.Color(),CL={fr:0x8fc08a,me:0x7fa8e8,al:0xe8d27f,en:0xe89a9f},BC={fr:0x5f8f5a,me:0x2f5fb0,al:0xb8961f,en:0xb5444d};let q=0,r=0;
   for(let j=0;j<64;j++){
     const i=realm*64+j,m=S.map[i],px=(j%8)*10,pz=Math.floor(j/8)*10;
     const own=!m?"fr":m[3]===id?"me":S.me.ally&&m[2]===S.me.ally?"al":"en";
-    const g=new THREE.Mesh(new THREE.BoxGeometry(8.6,.2,8.6),new THREE.MeshLambertMaterial({color:CL[own]}));
-    g.position.set(px,-.1,pz);g.userData.pi=i;wsc.add(g);wplots.push(g);
-    if(m){const s=lab(m[4]||"شهر "+(i+1),"👑 "+m[6]+" · "+m[0]);s.position.set(px,3.4,pz);wsc.add(s);wlabels.push(s)}
+    const bd=new THREE.Mesh(new THREE.BoxGeometry(9.2,.16,9.2),new THREE.MeshStandardMaterial({color:BC[own]}));bd.position.set(px,-.14,pz);bd.userData.pi=i;bd.receiveShadow=true;wsc.add(bd);wplots.push(bd);
+    const g=new THREE.Mesh(new THREE.BoxGeometry(8.6,.2,8.6),new THREE.MeshStandardMaterial({color:CL[own],roughness:.9}));
+    g.position.set(px,-.1,pz);g.receiveShadow=true;g.userData.pi=i;wsc.add(g);wplots.push(g);
+    if(m){const s=lab(m[4]||"شهر "+(i+1),"👑 "+m[6]+" · "+m[0],"#"+BC[own].toString(16).padStart(6,"0"));s.position.set(px,4.2,pz);wsc.add(s);wlabels.push(s)}
     for(const[c,ki,hp] of (wData.p[i]||[])){
-      const k=keys[ki],it=cat[k],hh=k==="hq"?1.8:it?.k==="inc"?1:Math.min(1.4,.25+(it?.hp||10)/60);
-      dm.position.set(px+(c%8)-3.5,hh/2,pz+Math.floor(c/8)-3.5);dm.scale.set(.8,hh,.8);dm.updateMatrix();
-      wmesh.setMatrixAt(q,dm.matrix);wmesh.setColorAt(q,col.setHex(COL[k]||0xcccccc));q++}
+      const k=keys[ki],it=cat[k],hh=k==="hq"?1.8:it?.k==="inc"?1:Math.min(1.4,.25+(it?.hp||10)/60),x=px+(c%8)-3.5,z=pz+Math.floor(c/8)-3.5;
+      dm.position.set(x,hh/2,z);dm.rotation.set(0,0,0);dm.scale.set(.8,hh,.8);dm.updateMatrix();
+      wmesh.setMatrixAt(q,dm.matrix);wmesh.setColorAt(q,col.setHex(COL[k]||0xcccccc));q++;
+      if(k==="hq"||it?.k==="inc"){dm.position.set(x,hh+.3,z);dm.rotation.set(0,Math.PI/4,0);dm.scale.set(1,.6,1);dm.updateMatrix();wroof.setMatrixAt(r,dm.matrix);wroof.setColorAt(r,col.setHex(k==="hq"?0xd4474f:0xe0a526));r++}}
   }
-  wmesh.count=q;wmesh.instanceMatrix.needsUpdate=true;if(wmesh.instanceColor)wmesh.instanceColor.needsUpdate=true;wsc.add(wmesh);
+  wmesh.count=q;wroof.count=r;[wmesh,wroof].forEach(m=>{m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;wsc.add(m)});
 }
 function tapMap(e){
   const r=R.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
@@ -279,13 +349,20 @@ function emp(p){
   $("#cs2")&&($("#cs2").onclick=()=>send({t:"name",i:v.i,nm:$("#ci").value}));
 }
 function ally(p){
-  const me=S.me;if(document.activeElement&&document.activeElement.id==="an")return;
-  p.innerHTML=(me.ally?`<div class="row"><b>اتحاد «${me.ally}»</b><button id="bt" style="background:var(--red)">🗡️ خیانت و خروج</button></div><div class="sub">هم‌پیمان‌ها نمی‌توانند به هم حمله کنند. خیانت یعنی ترک اتحاد، با ثبت لقب خائن.</div>`
-   :`<b>اتحاد بساز یا بپیوند</b><input id="an" maxlength="12" placeholder="اسم اتحاد"><button id="aj">پیوستن</button>`)+
-   `<div style="margin-top:10px"><b>فرمانده‌ها</b></div>`+S.pub.sort((a,b)=>b.caps-a.caps).map(x=>`<div class="row"><div>${x.name}${x.tr?" 🗡️"+x.tr:""}<small>${x.ally?"اتحاد «"+x.ally+"»":"بدون اتحاد"} · ${x.n} زمین</small></div><span>${rank(x.caps)} 🏴 ${x.caps} ${me.ally&&x.ally===me.ally&&x.name!==me.name?`<button class="chip" data-g="${x.name}">🎁 ۱۰۰</button>`:""}</span></div>`).join("");
+  const me=S.me;
+  const rq=(me.reqs||[]).map(r=>`<div class="row"><div>🤝 ${r.f}<small>درخواست اتحاد داده</small></div><span><button data-ac="${r.f}">قبول</button> <button data-rj="${r.f}" style="background:var(--red)">رد</button></span></div>`).join("");
+  p.innerHTML=(me.ally?`<div class="row"><b>اتحاد «${me.ally}»</b><button id="bt" style="background:var(--red)">🗡️ خیانت و خروج</button></div><div class="sub">هم‌پیمان‌ها نمی‌توانند به هم حمله کنند. اولین حمله به هم‌پیمان خیانت حساب می‌شود و لقب خائن می‌گیری.</div>`:`<div class="sub">برای اتحاد، به یک فرمانده درخواست بده تا قبول کند.</div>`)+
+   (rq?`<div style="margin-top:10px"><b>درخواست‌های دریافتی</b></div>${rq}`:"")+
+   `<div style="margin-top:10px"><b>فرمانده‌ها</b></div>`+S.pub.sort((a,b)=>b.caps-a.caps).map(x=>`<div class="row"><div>${x.name}${x.tr?" 🗡️"+x.tr:""}<small>${x.ally?"اتحاد «"+x.ally+"»":"بدون اتحاد"} · ${x.n} زمین</small></div><span>${rank(x.caps)} 🏴 ${x.caps} ${me.ally&&x.ally===me.ally&&x.name!==me.name?`<button class="chip" data-g="${x.name}">🎁 ۱۰۰</button>`:x.name!==me.name&&!(me.ally&&x.ally)?`<button class="chip" data-ar="${x.name}">🤝 درخواست اتحاد</button>`:""}</span></div>`).join("");
   $("#bt")&&($("#bt").onclick=()=>confirm("مطمئنی؟ همه می‌فهمند خیانت کردی")&&send({t:"betray"}));
-  $("#aj")&&($("#aj").onclick=()=>send({t:"ally",name:$("#an").value}));
+  p.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>send({t:"areq",to:b.dataset.ar}));
+  p.querySelectorAll("[data-ac]").forEach(b=>b.onclick=()=>send({t:"aacc",f:b.dataset.ac}));
+  p.querySelectorAll("[data-rj]").forEach(b=>b.onclick=()=>send({t:"arej",f:b.dataset.rj}));
 }
+const HELP=[["🎯 هدف بازی (از صفر)", true, "<p>تو یک شهر ۸×۸ خانه‌ای (۶۴ خانه) روی نقشه داری. وسط شهر <b>مرکز فرماندهی 🏰</b> است. با <b>تکه 📄</b> (پول بازی) ساختمان و سلاح می‌خری، اقتصاد می‌سازی، از شهرت دفاع می‌کنی و به شهر دیگران حمله می‌کنی.</p><p><b>باختن:</b> اگر مرکز 🏰 شهرت نابود شود آن زمین را از دست می‌دهی. اگر آخرین زمینت هم برود، با ۵۰۰ تکه و یک زمین تازه از نو شروع می‌کنی.</p><p><b>بردن:</b> بیشتر فتح کن (🏴)، جام 🏆 جمع کن و در جدول‌ها بالا برو.</p>"], ["🚀 شروع سریع (۵ قدم)", false, "<ol style=\"padding-right:18px\"><li>اول از فروشگاه <b>کارخانه کاغذ کوچک 📄</b> بخر و در زمین بچین تا هر روز تکه بدهد.</li><li>دور مرکز چند <b>دیوار آبی 🟦</b> و یک <b>پدافند 📡</b> بچین.</li><li>هر ۱۰ دقیقه «🎁 پاداش ورود» را بزن (۳۰۰ تکه).</li><li>ماموریت‌های روزانه را بگیر.</li><li>یک سلاح ارزان بخر و به شهر یک حریف ضعیف حمله کن.</li></ol><p>برای چیدن: در تب «زمین» یک چیز را از انبار انتخاب کن و روی خانهٔ خالی بزن. برای برداشتن/ترمیم هم روی ساختمان خودت بزن.</p>"], ["🧭 تب‌ها", false, "<p><b>زمین:</b> شهر سه‌بعدی تو. بکش = چرخش، دو انگشت = زوم.<br><b>نقشه:</b> همهٔ زمین‌های سرزمین. زمین دیگران را بزن تا ببینی/حمله کنی؛ زمین سبز را بزن تا بخری.<br><b>فروشگاه:</b> دفاع، حمله، درآمد، و فروشگاه جام.<br><b>اتحاد:</b> هم‌پیمان شدن، خیانت، هدیه.<br><b>گفتگو:</b> چت همگانی.<br><b>ماموریت:</b> ماموریت روزانه و بتل‌پس.<br><b>امپراطوری:</b> نام امپراطوری و پادشاهت، جدول جام‌ها.</p>"], ["🎨 معنی رنگ‌ها", false, "<p><b>رنگ زمین‌ها در نقشه:</b></p><p><span class=\"sw\" style=\"background:#8fc08a\"></span>سبز = زمین خالی (قابل خرید)<br><span class=\"sw\" style=\"background:#7fa8e8\"></span>آبی = زمین خودت<br><span class=\"sw\" style=\"background:#e8d27f\"></span>زرد = زمین هم‌پیمان (حمله ممنوع)<br><span class=\"sw\" style=\"background:#e89a9f\"></span>قرمز = زمین دشمن (قابل حمله)</p><p><b>نوار جان ساختمان:</b> <span class=\"sw\" style=\"background:#2f8f5b\"></span>سبز = سالم (بالای ۵۰٪)، <span class=\"sw\" style=\"background:#e0a526\"></span>زرد = آسیب‌دیده (۲۵ تا ۵۰٪)، <span class=\"sw\" style=\"background:#d4474f\"></span>قرمز = رو به نابودی. نوار فقط وقتی دیده می‌شود که ساختمان آسیب دیده باشد.</p><p><b>رنگ ساختمان‌ها:</b> دیوار آبی <span class=\"sw\" style=\"background:#2f6fd0\"></span>، پاک‌کن صورتی <span class=\"sw\" style=\"background:#f29bb0\"></span>، دستمال سفید <span class=\"sw\" style=\"background:#ffffff\"></span>، مداد/معدن/بانک زرد و طلایی <span class=\"sw\" style=\"background:#f2c14e\"></span>، گنبد شفاف <span class=\"sw\" style=\"background:#99ddee\"></span>، دیوار الماسی <span class=\"sw\" style=\"background:#7fe8ff\"></span>، گاوصندوق/منگنه‌ای خاکستری <span class=\"sw\" style=\"background:#666\"></span>، پدافند بنفش <span class=\"sw\" style=\"background:#9b8cf2\"></span>.</p><p><b>نقشهٔ سه‌بعدی:</b> هر ساختمان ارتفاع‌اش به جانش بستگی دارد (بلندتر = محکم‌تر). مرکز 🏰 با سقف قرمز و ساختمان‌های درآمدی با سقف طلایی دیده می‌شوند. 🛡️ یعنی زمین موقتاً سپر دارد.</p>"], ["💰 اقتصاد و تکه", false, "<p>هر ساختمان درآمدی در «روز بازی» (= ۶۰ ثانیه واقعی) مقدار مشخصی تکه می‌دهد و باید <b>در زمین چیده شود</b>. پیش از کار با انبار، اقتصاد را بساز.</p><table><tr><th>ساختمان</th><th>قیمت</th><th>درآمد/روز</th><th>سطح</th></tr><tr><td>کارخانه کوچک</td><td>۲۰۰</td><td>۲۰۰</td><td>۱</td></tr><tr><td>کارخانه متوسط</td><td>۴۰۰</td><td>۴۰۰</td><td>۱</td></tr><tr><td>معدن مداد</td><td>۳۰۰</td><td>۳۰۰</td><td>۳</td></tr><tr><td>چاپخانه</td><td>۸۰۰</td><td>۷۰۰</td><td>۵</td></tr><tr><td>کتابخانه</td><td>۱۵۰۰</td><td>۱۲۰۰</td><td>۱۵</td></tr><tr><td>بانک تکه</td><td>۳۰۰۰</td><td>۲۰۰۰</td><td>۲۵</td></tr><tr><td>کارخانه A4</td><td>۶۰۰۰</td><td>۴۰۰۰</td><td>۴۰</td></tr><tr><td>معدن طلا</td><td>🏆۵۰</td><td>۳۰۰۰</td><td>—</td></tr></table><p>ضریب سرزمین: سرزمین ۱ = ×۱ ، سرزمین ۲ (سطح ۳۰) = ×۲ ، سرزمین ۳ (سطح ۶۰) = ×۳.<br>درآمد‌ها دشمن‌پسندند: ساختمان درآمدی جانش کم است و با آتش‌افکن ۲.۵ برابر آسیب می‌بیند. پس پشت دفاع بگذارشان.<br>درآمد دیگر: پاداش ورود ۳۰۰ تکه هر ۱۰ دقیقه، ماموریت‌ها، بتل‌پس و غنیمت جنگ (۵۰٪ قیمت ساختمان نابودشده + ۳۰۰ برای فتح زمین).</p><p>ترمیم: ۳۰٪ قیمت ساختمان (مرکز ۱۵۰) و جان را کامل می‌کند.</p>"], ["🛡️ دفاع‌ها", false, "<table><tr><th>دفاع</th><th>جان</th><th>ویژگی</th></tr><tr><td>🟦 دیوار آبی (۱۰۰)</td><td>۱۵</td><td>ارزان؛ در برابر جنگنده و هواپیما ۲ برابر مقاوم، اما کاتر ۲ برابر می‌برد</td></tr><tr><td>🧻 دستمالی (۲۰۰ برای ۲۰ تا)</td><td>۲</td><td>بسیار ضعیف؛ منگنه ×۳ و آتش ×۲.۵ آسیب</td></tr><tr><td>🧵 سیم نخ (۱۵۰ برای ۵ تا)</td><td>۳</td><td>تانک و ای‌کی را ضعیف می‌کند (×۰.۴)</td></tr><tr><td>📎 سیم‌خاردار (۵۰)</td><td>۴</td><td>مثل نخ؛ ضد حمله زمینی</td></tr><tr><td>📡 پدافند (۲۵۰)</td><td>۶</td><td>جنگنده و هواپیما فقط ۳۰٪ اثر دارند</td></tr><tr><td>🖍️ پدافند ماژیک (۵۰۰ ، س۱۲)</td><td>۲۰</td><td>جنگنده/هواپیما ×۰.۲، بمب‌افکن ×۰.۳</td></tr><tr><td>🩹 تله چسب (۱۰۰ برای ۲)</td><td>۱۲</td><td>تانک و ای‌کی ×۰.۳</td></tr><tr><td>🖋️ خندق جوهر (۲۰۰ برای ۳ ، س۳)</td><td>۲۵</td><td>تانک ×۰.۵ ، ای‌کی ×۰.۲</td></tr><tr><td>🪪 کارت ویزیت (۴۰۰ برای ۲)</td><td>۸</td><td>نازک ولی ارزان؛ آتش ×۲.۵</td></tr><tr><td>✏️ برج مداد (۲۵۰ ، س۱)</td><td>۳۰</td><td>دفاع متوسط</td></tr><tr><td>🏯 قلعه مقوایی (۳۰۰)</td><td>۴۰</td><td>کاتر ×۲ و آتش ×۱.۵ آسیب می‌بیند</td></tr><tr><td>📏 خط‌کش فلزی (۳۵۰ ، س۵)</td><td>۵۰</td><td>دیوار بلند</td></tr><tr><td>🗄️ دیوار منگنه‌ای (۴۵۰ ، س۸)</td><td>۳۵</td><td>منگنه فقط ×۰.۳</td></tr><tr><td>📘 سپر کتاب (۴۰۰ ، س۱۰)</td><td>۴۵</td><td>آتش ×۲.۵</td></tr><tr><td>🧽 سد پاک‌کنی (۶۰۰)</td><td>۶۰</td><td>همه حمله‌ها ×۰.۳ جز پرگار و ربات پاک‌کن (×۳)</td></tr><tr><td>🔮 گنبد شفاف (۹۰۰ ، س۲۰)</td><td>۸۰</td><td>بالستیک ×۰.۵ ، هسته‌ای ×۰.۶</td></tr><tr><td>🔐 گاوصندوق (۱۲۰۰ ، س۳۰)</td><td>۱۲۰</td><td>قوی‌ترین دفاع تکه‌ای</td></tr><tr><td>💎 دیوار الماسی (🏆۳۰ برای ۲)</td><td>۱۲۰</td><td>بسیار محکم</td></tr></table>"], ["⚔️ سلاح‌ها", false, "<table><tr><th>سلاح</th><th>قیمت</th><th>قدرت</th><th>نکته</th></tr><tr><td>🔸 ای‌کی‌دار</td><td>۱</td><td>۲</td><td>تقریباً مفت؛ برای خراب کردن دستمال و کارت</td></tr><tr><td>🛩️ هواپیمای کاغذی (س۲)</td><td>۲۵۰</td><td>۱۸</td><td>سریع و ارزان، هوایی</td></tr><tr><td>🚜 تانک ضدآب</td><td>۴۰۰</td><td>۲۰</td><td>زمینی</td></tr><tr><td>🏹 تیرکمان گیره (س۴)</td><td>۳۰۰</td><td>۲۲</td><td></td></tr><tr><td>📐 پرتابه پرگاری</td><td>۵۰۰</td><td>۲۵</td><td>پاک‌کن را ×۳ می‌شکند</td></tr><tr><td>🤖 ربات پاک‌کن (س۸)</td><td>۵۰۰</td><td>۲۸</td><td>پاک‌کن ×۳</td></tr><tr><td>✈️ جنگنده آبی</td><td>۵۰۰</td><td>۳۰</td><td>هوایی</td></tr><tr><td>🔪 کاتر برقی (س۷)</td><td>۴۵۰</td><td>۳۰</td><td>دیوار آبی و قلعه ×۲</td></tr><tr><td>🚀 موشک مداد (س۳)</td><td>۴۵۰</td><td>۳۵</td><td></td></tr><tr><td>🔥 آتش‌افکن (س۱۰)</td><td>۵۵۰</td><td>۳۸</td><td>کاغذی‌ها ×۲.۵ (دستمال، کارخانه، کارت، کتاب)</td></tr><tr><td>🔫 توپ منگنه</td><td>۳۰۰</td><td>۴۰</td><td>دستمال ×۳؛ فقط ۳ بار در کل بازی!</td></tr><tr><td>⚫ بمب جوهر (س۶)</td><td>۶۵۰</td><td>۴۵</td><td></td></tr><tr><td>💣 بمب‌افکن A3 (س۱۲)</td><td>۹۰۰</td><td>۵۵</td><td>هوایی</td></tr><tr><td>🥇 تانک طلایی (🏆۴۰ برای ۳)</td><td>—</td><td>۶۰</td><td></td></tr><tr><td>☄️ بالستیک (س۲۰)</td><td>۱۵۰۰</td><td>۸۰</td><td></td></tr><tr><td>☢️ هسته‌ای (س۴۰)</td><td>۳۰۰۰</td><td>۱۵۰</td><td>یک ضربه تقریباً هر چیزی را می‌کشد</td></tr><tr><td>💧 چسب ماتیکی (۵۵۰ برای ۲)</td><td>۵۵۰</td><td>—</td><td>حریف ۲ حملهٔ بعدی‌اش را از دست می‌دهد</td></tr></table><p>قدرت × ضریب (جدول ضد‌ها) = آسیب. هر حمله فقط <b>یک خانه</b> را می‌زند. اگر خانهٔ خالی بزنی، خطا می‌رود و سلاح نیز مصرف می‌شود.</p>"], ["🎯 قوانین حمله", false, "<ul style=\"padding-right:18px\"><li>یک خانه از شهر دشمن را انتخاب و سلاح را بزن. هر حمله ۴ ثانیه صبر دارد.</li><li>نمی‌توانی به شهر خودت یا هم‌پیمانت حمله کنی (مگر اول خیانت کنی).</li><li>سرزمین‌ها سطح می‌خواهند: ۱ ، ۳۰ ، ۶۰.</li><li>اگر زمینی سپر 🛡️ داشته باشد حمله نمی‌شود؛ بعد از فتح، ۲ دقیقه همهٔ زمین‌های بازنده سپر می‌گیرند.</li><li>اگر روی تو چسب بریزند، چند حمله‌ات هدر می‌رود.</li><li>نابود کردن ساختمان: غنیمت ۵۰٪ قیمت + ۳ جام + ۱۰ امتیاز. نابود کردن مرکز 🏰: فتح زمین، ۳۰۰ تکه، ۳۰ جام ولی دفاع‌کننده ۲۰ جام از دست می‌دهد.</li><li>وقتی به تو حمله شود هشدار قرمز و صدا می‌گیری.</li></ul>"], ["🏰 آرایش‌های جنگی", false, "<p><b>خانهٔ مرکز در وسط (ردیف ۴ ، ستون ۴) ثابت است و فقط ۱۰۰ جان دارد؛ ازش حفاظت کن!</b></p><p><b>۱) لاک‌پشت (حلقه دور مرکز):</b> دور 🏰 دو حلقه بچین؛ حلقه بیرونی دیوار آبی/کارت ویزیت، حلقه داخلی سد پاک‌کنی و گاوصندوق. ساده و مقاوم ولی خرج دارد.</p><p><b>۲) لایه‌ای ضد‌همه:</b> جلو: دستمالی ارزان (طعمه). وسط: نخ + چسب نواری + خندق (ضد زمینی). پشت: پدافند + ماژیک (ضد هوایی). ته: مرکز. دشمن هر سلاح بزند یک ضد در راهش هست.</p><p><b>۳) طعمه و کمین:</b> ساختمان‌های ارزان (دستمال/ای‌کی/کارت) را دور بچین تا دشمن سلاح گران را روی آن‌ها هدر کند، قوی‌ها را وسط ببر.</p><p><b>۴) اقتصادی:</b> کارخانه‌ها را کنار هم در گوشه‌ها بچین و دفاع قوی دورشان. مناسب اوایل بازی تا سطح ۱۰.</p><p><b>۵) ضد فلزی:</b> اگر دشمن منگنه دارد دیوار منگنه‌ای ؛ اگر پرگار دارد از پاک‌کن دوری کن؛ اگر آتش‌افکن دارد کاغذی‌ها را کنار بگذار و قلعه/کتاب را کمتر.</p><p><b>۶) چند شهر:</b> زمین دوم بخر و آن‌جا فقط اقتصاد بساز؛ اگر یک شهر رفت، شهر دیگر نمی‌میرد.</p>"], ["🧠 استراتژی حمله", false, "<p><b>اول بشناس:</b> زمین دشمن را در نقشه ببین و ببین چه دفاعی دارد، بعد ضد‌اش را بزن:</p><ul style=\"padding-right:18px\"><li>دستمالی ← منگنه ×۳ یا آتش ×۲.۵ یا حتی ای‌کی‌دار ارزان</li><li>پاک‌کن ← پرگار یا ربات پاک‌کن</li><li>دیوار آبی / قلعه ← کاتر</li><li>کارخانه‌های کاغذی ← آتش‌افکن (درآمد دشمن را می‌خوابانی)</li><li>گنبد ← خودش سخت است؛ از کنارش برو یا بالستیک بزن</li><li>پدافند/ماژیک ← تانک و موشک بزن نه هواپیما</li><li>ضد زمینی (نخ/جوهر/چسب) ← جنگنده و بمب‌افکن</li></ul><p><b>مسیر کوتاه:</b> مرکز 🏰 فقط ۱۰۰ جان دارد؛ اگر ساختمانی حفاظتش نمی‌کند، مستقیم بزن. دو یا سه ضربهٔ قوی (بالستیک ۸۰ + هر چیز) کافی است.</p><p><b>چسب 💧</b> را قبل از حملهٔ اصلی بزن تا حریف نتواند جواب بدهد.</p><p><b>زمان‌بندی:</b> وقتی سپر 🛡️ تمام شد و حریف آفلاین است حمله کن. همچنین بعد از حملهٔ بزرگ دیگران، شهرهای تضعیف‌شده را بگیر.</p>"], ["⭐ سطح، جام و ماموریت", false, "<p><b>امتیاز تجربه (XP):</b> با خرید، چیدن، حمله و نابود کردن بالا می‌رود. سطح بالاتر سلاح و ساختمان و سرزمین جدید باز می‌کند.</p><p><b>جام 🏆:</b> با نابودی ساختمان (+۳) و فتح (+۳۰) می‌گیری و با باختن از دست می‌دهی. در فروشگاه جام، تانک طلایی و دیوار الماسی و معدن طلا می‌خری.</p><p><b>ماموریت روزانه:</b> ۳ حمله (۴۰۰ تکه)، ۳ ساختمان دشمن نابود (۷۰۰ تکه و ۵ جام)، ۵ چیدن (۳۰۰ تکه). هر روز تازه می‌شود.</p><p><b>بتل‌پس:</b> هر ۱۵۰ امتیاز یک مرحله؛ هر مرحله تکه می‌دهد و مراحل ۵ ، ۱۰ ، ۱۵ ، ۲۰ سلاح ویژه (هواپیما، کاتر، بمب‌افکن، بالستیک) و جام می‌دهند.</p><p><b>رتبه‌ها:</b> سرباز، سروان (۱ فتح)، سرهنگ (۳)، سرلشکر (۶)، فرمانده کل (۱۰). <b>القاب سطح:</b> کاغذ آبی ← بی‌آب (۱۰) ← معمولی (۲۰) ← ناپاره (۳۰) ← A4 (۶۰).</p>"], ["🤝 اتحاد، هدیه و خیانت", false, "<p>در تب «اتحاد» کنار اسم یک فرمانده روی «درخواست اتحاد» بزن؛ اگر او قبول کند هم‌پیمان می‌شوید. هم‌پیمان‌ها نمی‌توانند به هم حمله کنند و می‌توانند تکه هدیه بدهند. زمین هم‌پیمان در نقشه زرد دیده می‌شود.</p><p><b>خیانت 🗡️:</b> اولین حمله به هم‌پیمان خیانت حساب می‌شود: از اتحاد خارج می‌شوی و لقب «خائن» می‌گیری. دکمهٔ «خیانت و خروج» هم همین کار را بدون حمله می‌کند.</p>"], ["💡 نکتهٔ طلایی", false, "<p>اول اقتصاد (۲–۳ کارخانه)، بعد دفاع لایه‌ای، آخر حمله. همیشه ساختمان آسیب‌دیده را ترمیم کن و مرکز را سالم نگه دار. اگر دشمن قوی‌تر است، حمله نکن؛ زمین دوم بخر و از آن لذت ببر 😉</p>"]];
+$("#hc").innerHTML=HELP.map(([t,o,b])=>`<details ${o?"open":""}><summary>${t}</summary>${b}</details>`).join("");
+$("#hb").onclick=()=>$("#hm").classList.remove("hide");$("#hx").onclick=()=>$("#hm").classList.add("hide");
+$("#hm").onclick=e=>{if(e.target.id==="hm")$("#hm").classList.add("hide")};
 conn();
 (function(){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";s.async=true;s.onerror=()=>console.warn("three.js load failed");document.head.appendChild(s)})();
 </script>

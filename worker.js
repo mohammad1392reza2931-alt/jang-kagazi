@@ -99,6 +99,49 @@ export class GameRoom extends DurableObject {
     return new Response(null, { status: 101, webSocket: c });
   }
 
+  async hash(pw, salt) {
+    salt ||= [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+    const b = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations: 50000 }, k, 256);
+    return { s: salt, h: [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("") };
+  }
+  issue(ws, p) {
+    const tok = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    p.toks = [...(p.toks || []), tok].slice(-5);
+    ws.send(JSON.stringify({ t: "auth", id: p.id, tok, name: p.name }));
+  }
+  async auth(ws, m) {
+    if ((ws.fails || 0) >= 8) return this.err(ws, "تلاش بیش از حد؛ صفحه را دوباره باز کن");
+    const name = clean(m.name).slice(0, 14), pw = String(m.pw || "");
+    if (!name) return this.err(ws, "نام کاربری لازم است");
+    if (pw.length < 4 || pw.length > 64) return this.err(ws, "رمز باید ۴ تا ۶۴ نویسه باشد");
+    let p = Object.values(this.P).find((x) => x.name === name);
+    if (m.t === "reg") {
+      const hp = await this.hash(pw);
+      if (Object.values(this.P).some((x) => x.name === name)) return this.err(ws, "این نام قبلاً گرفته شده");
+      const id = crypto.randomUUID(), i = this.claim(id);
+      if (i === null) return this.err(ws, "نقشه پر است");
+      p = this.P[id] = { id, name, pw: hp, toks: [], reqs: [], tekke: 1500, inv: {}, ally: "", traitor: 0, caps: 0, su: 0, stun: 0, cd: 0, lv: 1, xp: 0, tr: 0, bp: 0, bpc: 0, emp: "امپراطوری " + name, king: name };
+      this.say(`${name} وارد جنگ شد`);
+    } else {
+      if (p && !p.pw) return this.err(ws, "این حساب رمز ندارد؛ از همان دستگاه قبلی وارد شو و رمز بگذار");
+      const ok = p && (await this.hash(pw, p.pw.s)).h === p.pw.h;
+      if (!ok) { ws.fails = (ws.fails || 0) + 1; return this.err(ws, "نام کاربری یا رمز اشتباه است"); }
+    }
+    this.issue(ws, p); this.enter(ws, p);
+  }
+  async setpw(ws, me, m) {
+    const pw = String(m.pw || "");
+    if (me.pw) return this.err(ws, "این حساب از قبل رمز دارد");
+    if (pw.length < 4 || pw.length > 64) return this.err(ws, "رمز باید ۴ تا ۶۴ نویسه باشد");
+    me.pw = await this.hash(pw); this.issue(ws, me); this.save(); this.push(); this.err(ws, "رمز ذخیره شد ✓");
+  }
+  enter(ws, pp) {
+    pp.lv ??= 1; pp.xp ??= 0; pp.tr ??= 0; pp.bp ??= 0; pp.bpc ??= 0; pp.emp ??= "امپراطوری " + pp.name; pp.king ??= pp.name; pp.reqs ??= [];
+    this.socks.set(ws, { id: pp.id, view: this.mine(pp.id)[0] ?? null });
+    this.save(); this.push(ws); this.push();
+  }
+
   xp(p, n) {
     p.xp += n; p.bp += n; const l = Math.floor(Math.sqrt(p.xp / 20)) + 1;
     if (l > p.lv) { p.lv = l; this.say(`⭐ ${p.name} به سطح ${l} رسید`); }
@@ -111,7 +154,7 @@ export class GameRoom extends DurableObject {
   }
   say(m) { this.log.unshift(m); this.log.length = Math.min(this.log.length, 10); }
   alert(id, m) { for (const [ws, s] of this.socks) if (s.id === id) try { ws.send(JSON.stringify({ t: "alert", m })); } catch {} }
-  err(ws, m) { ws.send(JSON.stringify({ t: "err", m })); }
+  err(ws, m, bad) { ws.send(JSON.stringify({ t: "err", m, bad: bad ? 1 : 0 })); }
   mine(id) { return Object.keys(this.plots).filter((i) => this.plots[i].o === id).map(Number); }
 
   claim(id, r = 0) {
@@ -124,19 +167,12 @@ export class GameRoom extends DurableObject {
 
   onMsg(ws, raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
+    if (m.t === "reg" || m.t === "login") return this.auth(ws, m);
     if (m.t === "join") {
-      const id = String(m.id || "").slice(0, 40), name = clean(m.name).slice(0, 14);
-      if (!id || !name) return this.err(ws, "نام لازم است");
-      if (!this.P[id]) {
-        if (Object.values(this.P).some((p) => p.name === name)) return this.err(ws, "این نام قبلاً گرفته شده");
-        const i = this.claim(id);
-        if (i === null) return this.err(ws, "نقشه پر است");
-        this.P[id] = { id, name, tekke: 1500, inv: {}, ally: "", traitor: 0, caps: 0, su: 0, stun: 0, cd: 0, lv: 1, xp: 0, tr: 0, bp: 0, bpc: 0, emp: "امپراطوری " + name, king: name };
-        this.say(`${name} وارد جنگ شد`);
-      }
-      const pp = this.P[id]; pp.lv ??= 1; pp.xp ??= 0; pp.tr ??= 0; pp.bp ??= 0; pp.bpc ??= 0; pp.emp ??= "امپراطوری " + pp.name; pp.king ??= pp.name;
-      this.socks.set(ws, { id, view: this.mine(id)[0] ?? null });
-      this.save(); this.push(ws); return this.push();
+      const p = this.P[String(m.id || "").slice(0, 40)];
+      if (!p) return this.err(ws, "حساب پیدا نشد؛ ثبت‌نام کن یا وارد شو", 1);
+      if (p.pw && !(p.toks || []).includes(String(m.tok || ""))) return this.err(ws, "نشست منقضی شده؛ دوباره وارد شو", 1);
+      return this.enter(ws, p);
     }
     const sk = this.socks.get(ws), me = sk && this.P[sk.id];
     if (!me) return;
@@ -202,7 +238,30 @@ export class GameRoom extends DurableObject {
       if (!to || to.id === me.id || !me.ally || to.ally !== me.ally || !(a > 0) || me.tekke < a) return this.err(ws, "هدیه فقط به هم‌پیمان و با تکه کافی");
       me.tekke -= a; to.tekke += a; this.say(`🎁 ${me.name} ${a} تکه به ${to.name} هدیه داد`);
     }
-    else if (m.t === "ally") { me.ally = clean(m.name).slice(0, 12); if (me.ally) this.say(`${me.name} به اتحاد «${me.ally}» پیوست`); }
+    else if (m.t === "ally") return this.err(ws, "برای اتحاد باید درخواست بدهی و طرف مقابل قبول کند");
+    else if (m.t === "areq") {
+      const to = Object.values(this.P).find((p) => p.name === m.to);
+      if (!to || to.id === me.id) return this.err(ws, "بازیکن پیدا نشد");
+      if (me.ally && me.ally === to.ally) return this.err(ws, "از قبل هم‌پیمان هستید");
+      if (me.ally && to.ally) return this.err(ws, "یکی از شما در اتحاد دیگری است");
+      to.reqs = (to.reqs || []).filter((r) => r.f !== me.name && Date.now() - r.t < 36e5);
+      to.reqs.push({ f: me.name, t: Date.now() });
+      this.alert(to.id, `🤝 ${me.name} درخواست اتحاد داد`);
+      this.err(ws, "درخواست فرستاده شد ✓");
+    }
+    else if (m.t === "aacc") {
+      const r = (me.reqs || []).find((x) => x.f === m.f), f = r && Object.values(this.P).find((p) => p.name === r.f);
+      me.reqs = (me.reqs || []).filter((x) => x !== r);
+      if (!f) return this.err(ws, "درخواست معتبر نیست");
+      if (me.ally && f.ally && me.ally !== f.ally) return this.err(ws, "هر دو در اتحادهای جدا هستید");
+      let nm = f.ally || me.ally;
+      if (!nm) { const b = "اتحاد " + f.name; nm = b; let k = 2; while (Object.values(this.P).some((p) => p.ally === nm)) nm = b + " " + k++; }
+      f.ally = me.ally = nm;
+      this.alert(f.id, `✅ ${me.name} درخواست اتحادت را قبول کرد`);
+      this.say(`🤝 ${f.name} و ${me.name} هم‌پیمان شدند («${nm}»)`);
+    }
+    else if (m.t === "arej") me.reqs = (me.reqs || []).filter((x) => x.f !== m.f);
+    else if (m.t === "setpw") return this.setpw(ws, me, m);
     else if (m.t === "betray" && me.ally) {
       this.say(`🗡️ ${me.name} به اتحاد «${me.ally}» خیانت کرد!`); me.ally = ""; me.traitor++;
     }
@@ -214,10 +273,11 @@ export class GameRoom extends DurableObject {
     if (!t || !it || it.k !== "atk" || !me.inv[w]) return this.err(ws, "حمله ممکن نیست");
     if (t.id === me.id) return this.err(ws, "به زمین خودت حمله نکن");
     if (me.lv < RLV[i >> 6]) return this.err(ws, "سطح کافی نداری");
-    if (me.ally && me.ally === t.ally) return this.err(ws, "هم‌پیمانی! اول باید خیانت کنی");
+    const bet = me.ally && me.ally === t.ally;
     if (pl.sh > Date.now()) return this.err(ws, "این زمین سپر دارد 🛡️");
     if (Date.now() < me.cd) return this.err(ws, "نیروها هنوز آماده نیستند");
     me.cd = Date.now() + 4000;
+    if (bet) { this.say(`🗡️ ${me.name} به هم‌پیمانش ${t.name} حمله کرد و خیانت کرد!`); me.ally = ""; me.traitor++; }
     this.ev = { id: ++this.evn, i, c, w };
     this.alert(t.id, `⚠️ ${me.name} به زمین تو حمله کرد!`);
     this.xp(me, 5); this.q(me, "atk");
@@ -268,11 +328,12 @@ export class GameRoom extends DurableObject {
       if (only && ws !== only) continue;
       const me = this.P[sk.id], pl = this.plots[sk.view];
       if (!me) continue;
+      const { pw: pw0, toks: _t, ...mm } = me;
       this.q(me);
       let inc = 0;
       for (const i of this.mine(me.id)) for (const b of this.plots[i].g) if (b && CAT[b.k]?.inc) inc += CAT[b.k].inc * RM[i >> 6];
       try {
-        ws.send(JSON.stringify({ t: "state", me: { ...me, tekke: Math.floor(me.tekke), inc }, map, pub, log: this.log, view: pl ? { i: sk.view, o: pl.o, g: pl.g, sh: pl.sh || 0 } : null, chat: this.chat, ev: this.ev }));
+        ws.send(JSON.stringify({ t: "state", me: { ...mm, nopw: !pw0, tekke: Math.floor(me.tekke), inc }, map, pub, log: this.log, view: pl ? { i: sk.view, o: pl.o, g: pl.g, sh: pl.sh || 0 } : null, chat: this.chat, ev: this.ev }));
       } catch {}
     }
   }
