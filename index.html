@@ -156,7 +156,8 @@ function base(p,own){
   const sh=v.sh>Date.now()?` · 🛡️ ${Math.ceil((v.sh-Date.now())/1000)} ثانیه`:"";
   p.innerHTML=`<div class="chips">${own.map(i=>`<button class="chip ${i===v.i?"sel":""}" data-v="${i}">${S.map[i][4]||"شهر "+(i+1)}</button>`).join("")}</div>
   <div class="row"><b>🏙️ ${m[4]||"شهر "+(v.i+1)} · ${m[5]} · 👑 ${m[6]}${mine?"":al?" (هم‌پیمان)":" · "+m[0]}${sh}</b>${mine?`<button id="rp" class="chip ${rep_?"sel":""}">🔧 ترمیم</button>`:""}</div>
-  <div class="sub">بکش تا بچرخد · دو انگشت برای زوم · ${mine?"روی خانه بزن تا انتخابت را بچینی؛ روی ساختمان بزنی برمی‌گردد":"سلاح انتخاب کن و روی ساختمان حریف بزن"}</div>`;
+  <div class="sub">${(()=>{const d=v.g.filter(b=>b&&cat[b.k]?.k==="def"),q=v.g.find(b=>b&&b.k==="hq");return `🛡️ ${d.length} سپر · جان سپرها ${Math.ceil(d.reduce((a,b)=>a+b.hp,0))} · ❤️ مرکز ${Math.ceil(q?.hp||0)}`})()}</div>
+  <div class="sub">بکش تا بچرخد · دو انگشت برای زوم · ${mine?"روی خانه بزن تا انتخابت را بچینی؛ روی ساختمان بزنی برمی‌گردد":"سلاح انتخاب کن و روی شهر حریف بزن؛ ضربه بین همه‌ی سپرها پخش می‌شود"}</div>`;
   $("#rp")&&($("#rp").onclick=()=>{rep_=!rep_;draw()});
 }
 function onCell(c){

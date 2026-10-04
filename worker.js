@@ -360,19 +360,41 @@ export class GameRoom extends DurableObject {
     if (Date.now() < me.cd) return this.err(ws, "نیروها هنوز آماده نیستند");
     me.cd = Date.now() + 4000;
     if (bet) { this.say(`🗡️ ${me.name} به هم‌پیمانش ${t.name} حمله کرد و خیانت کرد!`); me.ally = ""; me.traitor++; }
-    this.ev = { id: ++this.evn, i, c, w };
+    const hqc = pl.g.findIndex((x) => x?.k === "hq");
+    this.ev = { id: ++this.evn, i, c: hqc >= 0 ? hqc : c, w };
     this.alert(t.id, `⚠️ ${me.name} به زمین تو حمله کرد!`);
     this.xp(me, 5); this.q(me, "atk");
     if (me.stun > 0) { me.stun--; return this.err(ws, "گیر چسب افتادی!"); }
     if (w === "stapler") { if (me.su >= 3) return this.err(ws, "منگنه فقط ۳ بار"); me.su++; }
     if (w === "stapler" || w === "glue") me.inv[w]--;
     if (w === "glue") { t.stun = 2; return this.say(`${me.name} چسب روی ${t.name} ریخت 💧`); }
-    const b = pl.g[c];
-    if (!b) return this.say(`${me.name} به ${t.name} حمله کرد ولی خطا رفت`);
-    const mu = MULT[b.k]; b.hp -= it.pow * (mu ? mu[w] ?? mu._ ?? 1 : 1);
-    if (b.hp > 0) return this.say(`${me.name} به ${t.name} حمله کرد (${CAT[b.k]?.n || "مرکز"}: ${Math.ceil(b.hp)})`);
-    pl.g[c] = null;
-    if (b.k !== "hq") { this.q(me, "des"); this.xp(me, 10); me.tr += 3; t.tr = Math.max(0, (t.tr || 0) - 1); const l = Math.floor((CAT[b.k].p || 0) * 0.5); me.tekke += l; return this.say(`${me.name} ${CAT[b.k].n} ${t.name} را نابود کرد (غنیمت ${l})`); }
+    // جان شهر یکی است: ضربه بین همه‌ی سپرها پخش می‌شود و بعد از شکستن سپرها به مرکز می‌رسد
+    const hq = hqc >= 0 ? pl.g[hqc] : null;
+    const mult = (k) => { const mu = MULT[k]; return mu ? mu[w] ?? mu._ ?? 1 : 1; };
+    let alive = [], broken = [], left = it.pow;
+    pl.g.forEach((x, j) => { if (x && CAT[x.k]?.k === "def") alive.push(j); });
+    while (left > 1e-9 && alive.length) {
+      const share = left / alive.length, next = [];
+      for (const j of alive) {
+        const x = pl.g[j], f = mult(x.k) || 1, use = Math.min(share, x.hp / f);
+        x.hp -= use * f; left -= use;
+        if (x.hp <= 1e-9) broken.push(j); else next.push(j);
+      }
+      alive = next;
+    }
+    let loot = 0;
+    for (const j of broken) {
+      const x = pl.g[j]; pl.g[j] = null;
+      this.q(me, "des"); this.xp(me, 10); me.tr += 3; t.tr = Math.max(0, (t.tr || 0) - 1);
+      loot += Math.floor((CAT[x.k].p || 0) * 0.5);
+    }
+    me.tekke += loot;
+    const info = broken.length ? ` · ${broken.length} سپر نابود شد (غنیمت ${loot})` : "";
+    if (left > 1e-9 && hq) hq.hp -= left * mult("hq");
+    if (hq && hq.hp > 0) {
+      return this.say(`${me.name} به شهر ${t.name} حمله کرد (سپرها: ${alive.length}${left > 1e-9 ? " · مرکز: " + Math.ceil(hq.hp) : ""})${info}`);
+    }
+    pl.g[hqc] = null;
     delete this.plots[i]; me.tekke += 300; me.caps++; me.tr += 30; t.tr = Math.max(0, (t.tr || 0) - 20); this.xp(me, 60);
     this.say(`🏴 ${me.name} زمین ${t.name} را فتح کرد!`);
     if (!this.mine(t.id).length) { t.tekke = 500; t.inv = {}; t.stun = 0; this.claim(t.id); }
