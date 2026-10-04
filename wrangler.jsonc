@@ -5,5 +5,5 @@
   "durable_objects": { "bindings": [{ "name": "GAME", "class_name": "GameRoom" }] },
   "d1_databases": [{ "binding": "DB", "database_name": "paper-war-db" }],
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }],
-  "vars": { "ADMIN_NAME": "اسم-کاربری-خودت-را-اینجا-بنویس" }
+  "vars": { "ADMIN_NAME": "mammad" }
 }
