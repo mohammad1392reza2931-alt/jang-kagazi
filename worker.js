@@ -1,38 +1,72 @@
 import { DurableObject } from "cloudflare:workers";
 import html from "./index.html";
 
-// ---- کاتالوگ لول ۱ (کاغذ آبی). قیمت‌های بدون عدد از طرف من حدس زده شده، راحت عوض کن ----
+// قیمت‌های بدون عدد از طرف من حدس زده شده، راحت عوض کن
 const CAT = {
-  handk:  { n: "سد دستمالی", k: "def", p: 200, q: 20, hp: 2, d: "بسته ۲۰ تایی، هر دستمال ۲ ضربه تحمل می‌کند" },
-  thread: { n: "سیم نخ خیس", k: "def", p: 150, q: 5, hp: 3, d: "حمله زمینی را نصف می‌کند" },
-  ped:    { n: "پدافند دستمالی", k: "def", p: 250, q: 1, hp: 6, d: "حمله هوایی را نصف می‌کند" },
-  wall:   { n: "دیوار آبی", k: "def", p: 100, q: 1, hp: 15, d: "مقوای ضخیم، استحکام بالا" },
-  eraser: { n: "سد پاک‌کنی", k: "def", p: 600, q: 1, hp: 100, d: "همه چیز را می‌گیرد جز پرتابه پرگاری" },
-  clip:   { n: "سیم‌خاردار گیره کاغذ", k: "def", p: 50, q: 1, hp: 4, d: "حمله زمینی را نصف می‌کند" },
-  card:   { n: "دیوار کارت ویزیت", k: "def", p: 400, q: 2, hp: 8, d: "فقط از شهر اول (مرکز فرماندهی) محافظت می‌کند" },
-  tank:   { n: "تانک ضد آب", k: "atk", p: 400, pow: 20, d: "زمینی، قدرت ۲۰" },
-  jet:    { n: "جنگنده آبی", k: "atk", p: 500, pow: 30, d: "هوایی، قدرت ۳۰، از دیوار و دستمال رد می‌شود" },
-  stapler:{ n: "توپ منگنه", k: "atk", p: 300, pow: 40, d: "قدرت ۴۰، سد دستمالی را سوراخ می‌کند، فقط ۳ بار" },
-  compass:{ n: "پرتابه پرگاری", k: "atk", p: 500, pow: 25, d: "تنها سلاحی که از سد پاک‌کنی رد می‌شود" },
-  glue:   { n: "خمپاره چسب ماتیکی", k: "atk", p: 550, q: 2, d: "حریف ۲ حمله بعدی‌اش را نمی‌تواند انجام دهد" },
-  ak:     { n: "ای‌کی‌دار", k: "atk", p: 1, pow: 2, d: "ارزان، قدرت ۲" },
-  paper_s:{ n: "تولید کاغذ کوچک", k: "inc", p: 200, inc: 200, d: "روزی ۲۰۰ تکه" },
-  paper_m:{ n: "تولید کاغذ متوسط", k: "inc", p: 400, inc: 400, d: "روزی ۴۰۰ تکه" },
+  handk:  { n: "سد دستمالی", i: "🧻", k: "def", p: 200, q: 20, hp: 2, d: "بسته ۲۰ تایی، هر کدام ۲ ضربه. در برابر منگنه ضعیف" },
+  thread: { n: "سیم نخ خیس", i: "🧵", k: "def", p: 150, q: 5, hp: 3, d: "حمله زمینی (تانک، ای‌کی) را ضعیف می‌کند" },
+  ped:    { n: "پدافند دستمالی", i: "📡", k: "def", p: 250, q: 1, hp: 6, d: "برابر جنگنده مقاوم" },
+  wall:   { n: "دیوار آبی", i: "🟦", k: "def", p: 100, q: 1, hp: 15, d: "مقوای ضخیم" },
+  eraser: { n: "سد پاک‌کنی", i: "🧽", k: "def", p: 600, q: 1, hp: 60, d: "فقط پرگار آن را خوب می‌شکند" },
+  clip:   { n: "سیم‌خاردار گیره", i: "📎", k: "def", p: 50, q: 1, hp: 4, d: "حمله زمینی را ضعیف می‌کند" },
+  card:   { n: "کارت ویزیت", i: "🪪", k: "def", p: 400, q: 2, hp: 8, d: "نازک ولی محکم، بسته ۲ تایی" },
+  tank:   { n: "تانک ضد آب", i: "🚜", k: "atk", p: 400, pow: 20, d: "زمینی، قدرت ۲۰" },
+  jet:    { n: "جنگنده آبی", i: "✈️", k: "atk", p: 500, pow: 30, d: "هوایی، قدرت ۳۰" },
+  stapler:{ n: "توپ منگنه", i: "🔫", k: "atk", p: 300, pow: 40, d: "قدرت ۴۰، دستمال را سوراخ می‌کند، ۳ بار" },
+  compass:{ n: "پرتابه پرگاری", i: "📐", k: "atk", p: 500, pow: 25, d: "پاک‌کن را ۳ برابر خراب می‌کند" },
+  glue:   { n: "چسب ماتیکی", i: "💧", k: "atk", p: 550, q: 2, d: "حریف ۲ حمله بعدی‌اش را از دست می‌دهد" },
+  ak:     { n: "ای‌کی‌دار", i: "🔸", k: "atk", p: 1, pow: 2, d: "ارزان، قدرت ۲" },
+  paper_s:{ n: "کارخانه کاغذ کوچک", i: "📄", k: "inc", p: 200, hp: 10, inc: 200, d: "روزی ۲۰۰ تکه (باید در زمین بچینی)" },
+  paper_m:{ n: "کارخانه کاغذ متوسط", i: "📚", k: "inc", p: 400, hp: 20, inc: 400, d: "روزی ۴۰۰ تکه (باید در زمین بچینی)" },
+  cardcastle:{ n: "قلعه مقوایی", i: "🏯", k: "def", p: 300, hp: 40, lv: 1, d: "دفاع محکم" },
+  pencil:  { n: "برج مداد", i: "✏️", k: "def", p: 250, hp: 30, lv: 1, d: "دفاع متوسط" },
+  ruler:   { n: "خط‌کش فلزی", i: "📏", k: "def", p: 350, hp: 50, lv: 5, d: "دیوار بلند" },
+  tape:    { n: "تله چسب نواری", i: "🩹", k: "def", p: 100, q: 2, hp: 12, lv: 1, d: "تانک را خیلی ضعیف می‌کند" },
+  stapwall:{ n: "دیوار منگنه‌ای", i: "🗄️", k: "def", p: 450, hp: 35, lv: 8, d: "برابر توپ منگنه مقاوم" },
+  book:    { n: "سپر کتاب", i: "📘", k: "def", p: 400, hp: 45, lv: 10, d: "سپر ضخیم" },
+  marker:  { n: "پدافند ماژیک", i: "🖍️", k: "def", p: 500, hp: 20, lv: 12, d: "هواپیما و بمب‌افکن را ضعیف می‌کند" },
+  ink:     { n: "خندق جوهر", i: "🖋️", k: "def", p: 200, q: 3, hp: 25, lv: 3, d: "پیاده و تانک را ضعیف می‌کند" },
+  dome:    { n: "گنبد شفاف", i: "🔮", k: "def", p: 900, hp: 80, lv: 20, d: "موشک و بمب را ضعیف می‌کند" },
+  vault:   { n: "گاوصندوق فولادی", i: "🔐", k: "def", p: 1200, hp: 120, lv: 30, d: "قوی‌ترین دفاع تکه‌ای" },
+  pencil_missile:{ n: "موشک مداد", i: "🚀", k: "atk", p: 450, pow: 35, lv: 3, d: "قدرت ۳۵" },
+  ink_bomb:{ n: "بمب جوهر", i: "⚫", k: "atk", p: 650, pow: 45, lv: 6, d: "قدرت ۴۵" },
+  eraser_bot:{ n: "ربات پاک‌کن", i: "🤖", k: "atk", p: 500, pow: 28, lv: 8, d: "پاک‌کن را ۳ برابر خراب می‌کند" },
+  plane:   { n: "هواپیمای کاغذی", i: "🛩️", k: "atk", p: 250, pow: 18, lv: 2, d: "ارزان و سریع" },
+  clip_sling:{ n: "تیرکمان گیره", i: "🏹", k: "atk", p: 300, pow: 22, lv: 4, d: "قدرت ۲۲" },
+  lighter: { n: "آتش‌افکن فندکی", i: "🔥", k: "atk", p: 550, pow: 38, lv: 10, d: "کاغذی‌ها را ۲.۵ برابر می‌سوزاند" },
+  cutter:  { n: "کاتر برقی", i: "🔪", k: "atk", p: 450, pow: 30, lv: 7, d: "دیوارها را ۲ برابر می‌برد" },
+  bomber:  { n: "بمب‌افکن A3", i: "💣", k: "atk", p: 900, pow: 55, lv: 12, d: "قدرت ۵۵" },
+  ballistic:{ n: "موشک بالستیک", i: "☄️", k: "atk", p: 1500, pow: 80, lv: 20, d: "قدرت ۸۰" },
+  nuke:    { n: "بمب کاغذی هسته‌ای", i: "☢️", k: "atk", p: 3000, pow: 150, lv: 40, d: "قدرت ۱۵۰" },
+  pencil_mine:{ n: "معدن مداد", i: "⛏️", k: "inc", p: 300, hp: 15, inc: 300, lv: 3, d: "روزی ۳۰۰ تکه" },
+  printer: { n: "چاپخانه", i: "🖨️", k: "inc", p: 800, hp: 20, inc: 700, lv: 5, d: "روزی ۷۰۰ تکه" },
+  library: { n: "کتابخانه", i: "🏛️", k: "inc", p: 1500, hp: 30, inc: 1200, lv: 15, d: "روزی ۱۲۰۰ تکه" },
+  tekke_bank:{ n: "بانک تکه", i: "🏦", k: "inc", p: 3000, hp: 35, inc: 2000, lv: 25, d: "روزی ۲۰۰۰ تکه" },
+  a4_factory:{ n: "کارخانه کاغذ A4", i: "🏭", k: "inc", p: 6000, hp: 40, inc: 4000, lv: 40, d: "روزی ۴۰۰۰ تکه" },
+  gold_tank:{ n: "تانک طلایی", i: "🥇", k: "atk", tp: 40, q: 3, pow: 60, d: "۳ عدد، قدرت ۶۰" },
+  diamond_wall:{ n: "دیوار الماسی", i: "💎", k: "def", tp: 30, q: 2, hp: 120, d: "۲ عدد، بسیار محکم" },
+  gold_mine:{ n: "معدن طلا", i: "💰", k: "inc", tp: 50, hp: 40, inc: 3000, d: "روزی ۳۰۰۰ تکه" },
 };
-const DAY = 60; // هر «روز» بازی = ۶۰ ثانیه واقعی
-const ORDER = ["card", "wall", "handk", "thread", "clip", "ped"];
-
-const fresh = (id, name) => ({
-  id, name, tekke: 1000, cities: [100, 100, 100], inv: {}, hp: {}, inc: 0,
-  su: 0, stun: 0, cd: 0, wins: 0, seen: Date.now(),
-});
+const MULT = {
+  eraser: { compass: 3, eraser_bot: 3, _: 0.3 }, handk: { stapler: 3, lighter: 2.5 }, wall: { jet: 0.5, plane: 0.5, cutter: 2 },
+  ped: { jet: 0.3, plane: 0.3 }, thread: { tank: 0.4, ak: 0.4 }, clip: { tank: 0.4, ak: 0.4 }, tape: { tank: 0.3, ak: 0.3 },
+  ink: { tank: 0.5, ak: 0.2 }, stapwall: { stapler: 0.3 }, marker: { jet: 0.2, plane: 0.2, bomber: 0.3 }, cardcastle: { cutter: 2, lighter: 1.5 },
+  dome: { ballistic: 0.5, nuke: 0.6 }, paper_s: { lighter: 2.5 }, paper_m: { lighter: 2.5 }, card: { lighter: 2.5 }, book: { lighter: 2.5 },
+};
+const Q = [
+  { x: "۳ حمله انجام بده", k: "atk", n: 3, r: { t: 400, xp: 50 } },
+  { x: "۳ ساختمان دشمن را نابود کن", k: "des", n: 3, r: { t: 700, xp: 80, tr: 5 } },
+  { x: "۵ ساختمان یا دفاع بچین", k: "plc", n: 5, r: { t: 300, xp: 40 } },
+];
+const BPR = { 5: ["plane", 3], 10: ["cutter", 2], 15: ["bomber", 1], 20: ["ballistic", 1] };
+const RLV = [1, 30, 60], RM = [1, 2, 3]; // سطح لازم و ضریب درآمد هر سرزمین
+const clean = (s) => String(s || "").replace(/[<>&"'`]/g, "").trim();
+const DAY = 60, W_ = 192;
+const grid = () => { const g = Array(64).fill(null); g[27] = { k: "hq", hp: 100 }; return g; };
 
 export default {
   async fetch(req, env) {
-    const url = new URL(req.url);
-    if (url.pathname === "/ws") {
-      return env.GAME.get(env.GAME.idFromName("world")).fetch(req);
-    }
+    if (new URL(req.url).pathname === "/ws") return env.GAME.get(env.GAME.idFromName("world")).fetch(req);
     return new Response(html, { headers: { "content-type": "text/html;charset=utf-8" } });
   },
 };
@@ -40,16 +74,14 @@ export default {
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.players = {};
-    this.log = [];
-    this.socks = new Map();
-    this.last = Date.now();
-    this.n = 0;
+    this.P = {}; this.plots = {}; this.log = []; this.chat = []; this.evn = 0; this.ev = null; this.socks = new Map(); this.last = Date.now(); this.n = 0;
     ctx.blockConcurrencyWhile(async () => {
       try {
         await this.env.DB.exec("CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL, updated INTEGER)");
         const { results } = await this.env.DB.prepare("SELECT id, data FROM players").all();
-        for (const r of results) this.players[r.id] = JSON.parse(r.data);
+        for (const r of results) {
+          if (r.id === "__w") this.plots = JSON.parse(r.data); else this.P[r.id] = JSON.parse(r.data);
+        }
       } catch (e) { console.log("D1 init failed", e); this.dbErr = String(e); }
     });
     setInterval(() => this.tick(), 1000);
@@ -61,102 +93,172 @@ export class GameRoom extends DurableObject {
     s.accept();
     s.addEventListener("message", (e) => this.onMsg(s, e.data));
     s.addEventListener("close", () => this.socks.delete(s));
-    s.send(JSON.stringify({ t: "cat", cat: CAT }));
+    s.send(JSON.stringify({ t: "cat", cat: CAT, Q, RLV }));
     return new Response(null, { status: 101, webSocket: c });
   }
 
-  say(m) { this.log.unshift(m); this.log.length = Math.min(this.log.length, 8); }
+  xp(p, n) {
+    p.xp += n; p.bp += n; const l = Math.floor(Math.sqrt(p.xp / 20)) + 1;
+    if (l > p.lv) { p.lv = l; this.say(`⭐ ${p.name} به سطح ${l} رسید`); }
+  }
+  q(p, k) {
+    const d = Math.floor(Date.now() / 864e5);
+    if (!p.q || p.q.d !== d) p.q = { d, atk: 0, des: 0, plc: 0, c: [0, 0, 0] };
+    if (k) p.q[k]++;
+    return p.q;
+  }
+  say(m) { this.log.unshift(m); this.log.length = Math.min(this.log.length, 10); }
+  alert(id, m) { for (const [ws, s] of this.socks) if (s.id === id) try { ws.send(JSON.stringify({ t: "alert", m })); } catch {} }
   err(ws, m) { ws.send(JSON.stringify({ t: "err", m })); }
+  mine(id) { return Object.keys(this.plots).filter((i) => this.plots[i].o === id).map(Number); }
+
+  claim(id, r = 0) {
+    const free = [...Array(64).keys()].map((i) => r * 64 + i).filter((i) => !this.plots[i]);
+    if (!free.length) return null;
+    const i = free[Math.floor(Math.random() * free.length)];
+    this.plots[i] = { o: id, g: grid() };
+    return i;
+  }
 
   onMsg(ws, raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.t === "join") {
-      const id = String(m.id || "").slice(0, 40);
-      const name = String(m.name || "").trim().slice(0, 14);
+      const id = String(m.id || "").slice(0, 40), name = clean(m.name).slice(0, 14);
       if (!id || !name) return this.err(ws, "نام لازم است");
-      if (!this.players[id]) {
-        if (Object.values(this.players).some((p) => p.name === name)) return this.err(ws, "این نام قبلاً گرفته شده");
-        this.players[id] = fresh(id, name);
+      if (!this.P[id]) {
+        if (Object.values(this.P).some((p) => p.name === name)) return this.err(ws, "این نام قبلاً گرفته شده");
+        const i = this.claim(id);
+        if (i === null) return this.err(ws, "نقشه پر است");
+        this.P[id] = { id, name, tekke: 1500, inv: {}, ally: "", traitor: 0, caps: 0, su: 0, stun: 0, cd: 0, lv: 1, xp: 0, tr: 0, bp: 0, bpc: 0, emp: "امپراطوری " + name, king: name };
         this.say(`${name} وارد جنگ شد`);
       }
-      this.socks.set(ws, id);
+      const pp = this.P[id]; pp.lv ??= 1; pp.xp ??= 0; pp.tr ??= 0; pp.bp ??= 0; pp.bpc ??= 0; pp.emp ??= "امپراطوری " + pp.name; pp.king ??= pp.name;
+      this.socks.set(ws, { id, view: this.mine(id)[0] ?? null });
       this.save(); return this.push();
     }
-    const me = this.players[this.socks.get(ws)];
+    const sk = this.socks.get(ws), me = sk && this.P[sk.id];
     if (!me) return;
-    if (m.t === "buy") {
-      const it = CAT[m.k];
-      if (!it) return;
-      if (me.tekke < it.p) return this.err(ws, "تکه کافی نداری");
-      me.tekke -= it.p;
-      if (it.k === "inc") me.inc += it.inc;
-      else if (it.k === "def") me.hp[m.k] = (me.hp[m.k] || 0) + it.q * it.hp;
-      else me.inv[m.k] = (me.inv[m.k] || 0) + (it.q || 1);
+    const it = CAT[m.k];
+    if (m.t === "view" && this.plots[m.i] && me.lv >= RLV[m.i >> 6]) sk.view = m.i;
+    else if (m.t === "buy" && it) {
+      if (me.lv < (it.lv || 1)) return this.err(ws, "سطح کافی نداری");
+      if (it.tp) { if (me.tr < it.tp) return this.err(ws, "جام کافی نداری"); me.tr -= it.tp; }
+      else { if (me.tekke < it.p) return this.err(ws, "تکه کافی نداری"); me.tekke -= it.p; }
+      me.inv[m.k] = (me.inv[m.k] || 0) + (it.q || 1); this.xp(me, 2);
+    } else if (m.t === "buyplot") {
+      const cost = 500 * (1 + (m.i >> 6)) * this.mine(me.id).length;
+      if (this.plots[m.i] || m.i < 0 || m.i >= W_) return this.err(ws, "این زمین صاحب دارد");
+      if (me.tekke < cost) return this.err(ws, `خرید زمین ${cost} تکه لازم دارد`);
+      if (me.lv < RLV[m.i >> 6]) return this.err(ws, "سطح کافی نداری");
+      me.tekke -= cost; this.plots[m.i] = { o: me.id, g: grid() }; sk.view = m.i;
+      this.say(`${me.name} یک زمین جدید خرید`);
+    } else if (m.t === "place") {
+      const pl = this.plots[m.i];
+      if (!pl || pl.o !== me.id || !it || it.k === "atk" || !me.inv[m.k] || pl.g[m.c] || m.c < 0 || m.c > 63) return;
+      pl.g[m.c] = { k: m.k, hp: it.hp }; me.inv[m.k]--; this.q(me, "plc"); this.xp(me, 2);
+    } else if (m.t === "pick") {
+      const pl = this.plots[m.i], b = pl?.g[m.c];
+      if (!pl || pl.o !== me.id || !b || b.k === "hq") return;
+      me.inv[b.k] = (me.inv[b.k] || 0) + 1; pl.g[m.c] = null;
+    } else if (m.t === "atk") this.attack(ws, me, m);
+    else if (m.t === "prof") { me.emp = clean(m.emp).slice(0, 16) || me.emp; me.king = clean(m.king).slice(0, 14) || me.king; }
+    else if (m.t === "name") { const pl = this.plots[m.i]; if (pl && pl.o === me.id) pl.nm = clean(m.nm).slice(0, 16); }
+    else if (m.t === "qclaim") {
+      const x = Q[m.n], q = this.q(me);
+      if (!x || q.c[m.n] || q[x.k] < x.n) return this.err(ws, "هنوز کامل نشده");
+      q.c[m.n] = 1; me.tekke += x.r.t; me.tr += x.r.tr || 0; this.xp(me, x.r.xp);
+    } else if (m.t === "bpc") {
+      const tier = Math.min(20, Math.floor(me.bp / 150));
+      if (tier <= me.bpc) return;
+      const t = ++me.bpc; me.tekke += 300 + 100 * t;
+      const r = BPR[t]; if (r) { me.inv[r[0]] = (me.inv[r[0]] || 0) + r[1]; me.tr += 10; }
     }
-    if (m.t === "atk") this.attack(ws, me, m);
+    else if (m.t === "bonus") { if (Date.now() < (me.bonus || 0)) return this.err(ws, "هنوز آماده نیست"); me.tekke += 300; me.bonus = Date.now() + 600000; }
+    else if (m.t === "repair") {
+      const pl = this.plots[m.i], b = pl?.g[m.c];
+      if (!pl || pl.o !== me.id || !b) return;
+      const mx = b.k === "hq" ? 100 : CAT[b.k].hp, cost = Math.ceil((b.k === "hq" ? 500 : CAT[b.k].p || 600) * 0.3);
+      if (b.hp >= mx) return this.err(ws, "سالم است");
+      if (me.tekke < cost) return this.err(ws, `ترمیم ${cost} تکه لازم دارد`);
+      me.tekke -= cost; b.hp = mx;
+    } else if (m.t === "chat") {
+      const x = clean(m.x).slice(0, 80);
+      if (x) { this.chat.unshift({ n: me.name, a: me.ally, x }); this.chat.length = Math.min(this.chat.length, 20); }
+    } else if (m.t === "gift") {
+      const to = Object.values(this.P).find((p) => p.name === m.to), a = Math.floor(+m.a);
+      if (!to || to.id === me.id || !me.ally || to.ally !== me.ally || !(a > 0) || me.tekke < a) return this.err(ws, "هدیه فقط به هم‌پیمان و با تکه کافی");
+      me.tekke -= a; to.tekke += a; this.say(`🎁 ${me.name} ${a} تکه به ${to.name} هدیه داد`);
+    }
+    else if (m.t === "ally") { me.ally = clean(m.name).slice(0, 12); if (me.ally) this.say(`${me.name} به اتحاد «${me.ally}» پیوست`); }
+    else if (m.t === "betray" && me.ally) {
+      this.say(`🗡️ ${me.name} به اتحاد «${me.ally}» خیانت کرد!`); me.ally = ""; me.traitor++;
+    }
     this.save(); this.push();
   }
 
-  attack(ws, me, { tid, ci, w }) {
-    const it = CAT[w], t = this.players[tid];
-    if (!it || it.k !== "atk" || !t || t.id === me.id) return;
-    if (!me.inv[w]) return this.err(ws, "این سلاح را نداری");
-    if (ci < 0 || ci > 2 || t.cities[ci] <= 0) return this.err(ws, "این شهر قبلاً نابود شده");
+  attack(ws, me, { i, c, w }) {
+    const pl = this.plots[i], it = CAT[w], t = pl && this.P[pl.o];
+    if (!t || !it || it.k !== "atk" || !me.inv[w]) return this.err(ws, "حمله ممکن نیست");
+    if (t.id === me.id) return this.err(ws, "به زمین خودت حمله نکن");
+    if (me.lv < RLV[i >> 6]) return this.err(ws, "سطح کافی نداری");
+    if (me.ally && me.ally === t.ally) return this.err(ws, "هم‌پیمانی! اول باید خیانت کنی");
+    if (pl.sh > Date.now()) return this.err(ws, "این زمین سپر دارد 🛡️");
     if (Date.now() < me.cd) return this.err(ws, "نیروها هنوز آماده نیستند");
-    if (me.stun > 0) { me.stun--; me.cd = Date.now() + 4000; return this.err(ws, `گیر چسب افتادی! (${me.stun} نوبت دیگر)`); }
-    if (w === "stapler") { if (me.su >= 3) return this.err(ws, "منگنه ۳ بار بیشتر شلیک نمی‌شود"); me.su++; }
-    if (w === "stapler" || w === "glue") me.inv[w]--;
     me.cd = Date.now() + 4000;
-    if (w === "glue") { t.stun = 2; return this.say(`${me.name} چسب ماتیکی روی ${t.name} ریخت`); }
-
-    let pow = it.pow;
-    const ground = w === "tank" || w === "ak", air = w === "jet";
-    if (ground && (t.hp.thread > 0 || t.hp.clip > 0)) pow *= 0.5;
-    if (air && t.hp.ped > 0) pow *= 0.5;
-    if (t.hp.eraser > 0 && w !== "compass") {
-      t.hp.eraser = Math.max(0, t.hp.eraser - pow); pow = 0;
-    } else {
-      for (const k of ORDER) {
-        if (pow <= 0) break;
-        if (k === "card" && ci !== 0) continue;
-        if (air && (k === "wall" || k === "handk")) continue;
-        if (w === "stapler" && k === "handk") { t.hp.handk = Math.max(0, (t.hp.handk || 0) - 12); continue; }
-        const h = t.hp[k] || 0; if (h <= 0 || k === "ped") continue;
-        const used = Math.min(h, pow); t.hp[k] -= used; pow -= used;
-      }
-    }
-    t.cities[ci] = Math.max(0, Math.round(t.cities[ci] - pow));
-    this.say(`${me.name} با ${it.n} به ${t.name} حمله کرد (شهر ${ci + 1}: ${t.cities[ci]})`);
-    if (t.cities.every((c) => c <= 0)) {
-      me.wins++; me.tekke += 500;
-      this.say(`${me.name} هر ۳ شهر ${t.name} را نابود کرد! 🏆`);
-      Object.assign(t, fresh(t.id, t.name), { tekke: 500, wins: t.wins });
-    }
+    this.ev = { id: ++this.evn, i, c, w };
+    this.alert(t.id, `⚠️ ${me.name} به زمین تو حمله کرد!`);
+    this.xp(me, 5); this.q(me, "atk");
+    if (me.stun > 0) { me.stun--; return this.err(ws, "گیر چسب افتادی!"); }
+    if (w === "stapler") { if (me.su >= 3) return this.err(ws, "منگنه فقط ۳ بار"); me.su++; }
+    if (w === "stapler" || w === "glue") me.inv[w]--;
+    if (w === "glue") { t.stun = 2; return this.say(`${me.name} چسب روی ${t.name} ریخت 💧`); }
+    const b = pl.g[c];
+    if (!b) return this.say(`${me.name} به ${t.name} حمله کرد ولی خطا رفت`);
+    const mu = MULT[b.k]; b.hp -= it.pow * (mu ? mu[w] ?? mu._ ?? 1 : 1);
+    if (b.hp > 0) return this.say(`${me.name} به ${t.name} حمله کرد (${CAT[b.k]?.n || "مرکز"}: ${Math.ceil(b.hp)})`);
+    pl.g[c] = null;
+    if (b.k !== "hq") { this.q(me, "des"); this.xp(me, 10); me.tr += 3; t.tr = Math.max(0, (t.tr || 0) - 1); const l = Math.floor((CAT[b.k].p || 0) * 0.5); me.tekke += l; return this.say(`${me.name} ${CAT[b.k].n} ${t.name} را نابود کرد (غنیمت ${l})`); }
+    delete this.plots[i]; me.tekke += 300; me.caps++; me.tr += 30; t.tr = Math.max(0, (t.tr || 0) - 20); this.xp(me, 60);
+    this.say(`🏴 ${me.name} زمین ${t.name} را فتح کرد!`);
+    if (!this.mine(t.id).length) { t.tekke = 500; t.inv = {}; t.stun = 0; this.claim(t.id); }
+    for (const j of this.mine(t.id)) this.plots[j].sh = Date.now() + 120000;
+    for (const s of this.socks.values()) if (s.view == i) s.view = this.mine(s.id)[0] ?? null;
   }
 
   tick() {
-    const now = Date.now(), dt = (now - this.last) / 1000; this.last = now;
-    for (const p of Object.values(this.players)) p.tekke += (p.inc / DAY) * dt;
+    const dt = (Date.now() - this.last) / 1000; this.last = Date.now();
+    for (const [pi, pl] of Object.entries(this.plots)) {
+      const o = this.P[pl.o]; if (!o) continue;
+      for (const b of pl.g) if (b && CAT[b.k]?.inc) o.tekke += (CAT[b.k].inc * RM[pi >> 6] / DAY) * dt;
+    }
     if (this.socks.size) { this.push(); if (++this.n % 30 === 0) this.save(); }
   }
 
   save() {
-    if (this.saving) return;
+    if (this.saving || this.dbErr) return;
     this.saving = setTimeout(async () => {
       this.saving = null;
       const q = "INSERT INTO players (id,name,data,updated) VALUES (?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET name=?2,data=?3,updated=?4";
-      const st = Object.values(this.players).map((p) => this.env.DB.prepare(q).bind(p.id, p.name, JSON.stringify(p), Date.now()));
-      if (this.dbErr) return;
-      if (st.length) try { await this.env.DB.batch(st); } catch (e) { console.log("D1 save failed", e); }
+      const st = Object.values(this.P).map((p) => this.env.DB.prepare(q).bind(p.id, p.name, JSON.stringify(p), Date.now()));
+      st.push(this.env.DB.prepare(q).bind("__w", "__w", JSON.stringify(this.plots), Date.now()));
+      try { await this.env.DB.batch(st); } catch (e) { console.log("D1 save failed", e); }
     }, 3000);
   }
 
   push() {
-    const online = new Set(this.socks.values());
-    const pub = Object.values(this.players).map((p) => ({ id: p.id, name: p.name, cities: p.cities, wins: p.wins, on: online.has(p.id) }));
-    for (const [ws, id] of this.socks) {
-      const me = this.players[id];
-      try { ws.send(JSON.stringify({ t: "state", me: { ...me, tekke: Math.floor(me.tekke) }, all: pub, log: this.log })); } catch {}
+    const map = [...Array(W_).keys()].map((i) => {
+      const pl = this.plots[i], o = pl && this.P[pl.o];
+      return o ? [o.name, Math.ceil(pl.g[27]?.hp ?? pl.g.find((b) => b?.k === "hq")?.hp ?? 0), o.ally, o.id, pl.nm || "", o.emp, o.king] : null;
+    });
+    const pub = Object.values(this.P).map((p) => ({ name: p.name, ally: p.ally, caps: p.caps, tr: p.traitor, tp: p.tr, lv: p.lv, emp: p.emp, king: p.king, n: this.mine(p.id).length }));
+    for (const [ws, sk] of this.socks) {
+      const me = this.P[sk.id], pl = this.plots[sk.view];
+      this.q(me);
+      let inc = 0;
+      for (const i of this.mine(me.id)) for (const b of this.plots[i].g) if (b && CAT[b.k]?.inc) inc += CAT[b.k].inc * RM[i >> 6];
+      try {
+        ws.send(JSON.stringify({ t: "state", me: { ...me, tekke: Math.floor(me.tekke), inc }, map, pub, log: this.log, view: pl ? { i: sk.view, o: pl.o, g: pl.g, sh: pl.sh || 0 } : null, chat: this.chat, ev: this.ev }));
+      } catch {}
     }
   }
 }

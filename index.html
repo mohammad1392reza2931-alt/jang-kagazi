@@ -8,36 +8,37 @@
 <style>
 :root{--paper:#f6f8fc;--line:#b9d3f0;--ink:#1b2f5b;--red:#d4474f;--gold:#e0a526;--ok:#2f8f5b}
 *{box-sizing:border-box;margin:0}
-body{font-family:Vazirmatn,Tahoma,sans-serif;color:var(--ink);background:var(--paper) repeating-linear-gradient(transparent 0 27px,var(--line) 27px 28px);min-height:100vh;padding:0 12px 40px;border-right:3px solid var(--red);max-width:560px;margin:auto;padding-right:16px}
-h1{font-weight:900;font-size:28px;padding:16px 0 4px}
-.sub{font-size:13px;opacity:.7;margin-bottom:12px}
-.box{background:#fffefa;border:2px solid var(--ink);border-radius:6px 14px 6px 14px;padding:12px;margin-bottom:12px}
+body{font-family:Vazirmatn,Tahoma,sans-serif;color:var(--ink);background:var(--paper) repeating-linear-gradient(transparent 0 27px,var(--line) 27px 28px);min-height:100vh;padding:0 12px 40px 16px;border-right:3px solid var(--red);max-width:560px;margin:auto}
+h1{font-weight:900;font-size:26px;padding:12px 0 2px}
+.sub{font-size:12.5px;opacity:.75}
+.box{background:#fffefa;border:2px solid var(--ink);border-radius:6px 14px 6px 14px;padding:10px;margin-bottom:10px}
 input,button{font:inherit}
 input{width:100%;padding:10px;border:2px solid var(--ink);border-radius:8px;margin:8px 0;background:#fff}
-button{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
+button{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:7px 11px;cursor:pointer}
 button:disabled{opacity:.35}
 button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
-.top{display:flex;justify-content:space-between;align-items:center;font-weight:700}
-.big{font-size:26px;font-weight:900}
-.tabs{display:flex;gap:6px;margin-bottom:12px}
-.tabs button{flex:1;background:#fff;color:var(--ink);border:2px solid var(--ink)}
+.top{display:flex;justify-content:space-between;align-items:baseline}
+.big{font-size:24px;font-weight:900}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chip{background:#fff;color:var(--ink);border:2px solid var(--ink);padding:4px 8px;font-size:13px}
+.chip.sel{background:var(--gold)}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}.bar{height:8px;background:#dbe6f5;border-radius:4px;overflow:hidden;margin:4px 0}.bar i{display:block;height:100%;background:var(--ok)}
+.tabs button{flex:1 0 22%;background:#fff;color:var(--ink);border:2px solid var(--ink);padding:7px 2px}
 .tabs button.on{background:var(--ink);color:#fff}
-.city{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px}
-.bar{flex:1;height:12px;background:#dbe6f5;border-radius:6px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--ok)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.g{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;direction:ltr;margin:8px 0}
+.c{aspect-ratio:1;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:0;font-size:18px;position:relative;line-height:1}
+.c i{position:absolute;bottom:0;right:2px;font-size:8px;font-style:normal;opacity:.7}
+.c.me{background:var(--ink);color:#fff}.c.al{background:var(--gold)}.c.en{background:#f3b8bb}.c.fr{background:#fff;border-style:dashed}
+.c.hq{background:#fde9a8}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line)}
 .row small{display:block;opacity:.7;font-size:12px}
-.cb{background:var(--red);padding:6px 10px;font-size:13px}
-.cb.dead{background:#999}
 .log{font-size:12.5px;line-height:1.9}
 .err{position:fixed;bottom:16px;left:12px;right:12px;max-width:520px;margin:auto;background:var(--red);color:#fff;padding:10px;border-radius:10px;text-align:center}
-.sel{background:var(--gold);color:var(--ink)}
 .hide{display:none}
 </style>
 </head>
 <body>
 <h1>جنگ کاغذی</h1>
-<div class="sub">لول ۱ · کاغذ آبی</div>
 <div id="login" class="box">
   <b>اسم فرمانده‌ات چیه؟</b>
   <input id="nm" maxlength="14" placeholder="مثلاً: کاغذ‌خان">
@@ -46,57 +47,196 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold)}
 </div>
 <div id="game" class="hide">
   <div class="box">
-    <div class="top"><span id="who"></span><span>🏆 <span id="wins">0</span></span></div>
-    <div class="big"><span id="tk">0</span> تکه</div>
+    <div class="top"><b id="who"></b><span class="sub">⭐ <span id="lvl">1</span> · 🏆 <span id="trp">0</span> · 🏴 <span id="caps">0</span> · 🗡️ <span id="tr">0</span></span></div>
+    <div class="big">📄 <span id="tk">0</span> تکه</div>
+    <div class="bar"><i id="xpb" style="width:0"></i></div>
     <div class="sub" id="inc"></div>
-    <div id="mine"></div>
-    <div class="sub" id="def"></div>
+    <div class="chips" id="inv"></div>
+    <button id="bn" class="chip" style="margin-top:8px">🎁 پاداش ورود</button>
   </div>
-  <div class="tabs">
-    <button data-t="atk" class="on">حمله</button>
-    <button data-t="shop">فروشگاه</button>
+  <div class="tabs" id="tabs">
+    <button data-t="base">زمین</button><button data-t="map">نقشه</button><button data-t="shop">فروشگاه</button><button data-t="ally">اتحاد</button><button data-t="chat">گفتگو</button><button data-t="quest">ماموریت</button><button data-t="emp">امپراطوری</button>
   </div>
-  <div id="p-atk" class="box"></div>
-  <div id="p-shop" class="box hide"></div>
+  <div id="stage" class="box" style="padding:0;height:min(80vw,400px);overflow:hidden;touch-action:none;display:none"></div>
+  <div id="p" class="box"></div>
   <div class="box log" id="log"></div>
 </div>
 <div id="er" class="err hide"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
-let ws,cat={},S=null,tab="atk",wsel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
+let ws,cat={},Q=[],RLV=[1,30,60],S=null,tab="base",sel=null,id=localStorage.pwid||(localStorage.pwid=crypto.randomUUID());
+const HOST="wss://jang-kagazi.mohammad1392reza2931.workers.dev";
 function conn(){
-  ws=new WebSocket((location.hostname.endsWith("workers.dev")?location.origin.replace("http","ws"):"wss://jang-kagazi.mohammad1392reza2931.workers.dev")+"/ws");
-  ws.onopen=()=>{$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)ws.send(JSON.stringify({t:"join",id,name:localStorage.pwname}))};
+  ws=new WebSocket((location.hostname.endsWith("workers.dev")?location.origin.replace("http","ws"):HOST)+"/ws");
+  ws.onopen=()=>{$("#st").textContent="به سرور وصل شد ✓";if(localStorage.pwname)send({t:"join",id,name:localStorage.pwname})};
   ws.onmessage=e=>{const m=JSON.parse(e.data);
-    if(m.t==="cat")cat=m.cat;
+    if(m.t==="cat"){cat=m.cat;Q=m.Q;RLV=m.RLV}
     if(m.t==="err")toast(m.m);
+    if(m.t==="alert"){toast(m.m);beep(160,.3,"sawtooth");navigator.vibrate&&navigator.vibrate([80,40,80])}
     if(m.t==="state"){S=m;$("#login").classList.add("hide");$("#game").classList.remove("hide");draw()}};
-  ws.onclose=()=>{$("#st").textContent="اتصال به سرور برقرار نیست، دوباره تلاش می‌کنم...";setTimeout(conn,1500)};
+  ws.onclose=()=>{$("#st").textContent="اتصال برقرار نیست، دوباره تلاش می‌کنم...";setTimeout(conn,1500)};
 }
 const send=o=>ws.readyState===1&&ws.send(JSON.stringify(o));
 function toast(t){const e=$("#er");e.textContent=t;e.classList.remove("hide");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.add("hide"),2200)}
-$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;localStorage.pwname=n;if(ws.readyState!==1)return toast("هنوز به سرور وصل نشدم، چند ثانیه صبر کن");$("#st").textContent="منتظر پاسخ سرور...";send({t:"join",id,name:n})};
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw()});
-const bar=h=>`<div class="bar"><i style="width:${h}%;${h<35?"background:var(--red)":""}"></i></div>`;
+$("#go").onclick=()=>{const n=$("#nm").value.trim();if(!n)return;if(ws.readyState!==1)return toast("هنوز به سرور وصل نشدم");localStorage.pwname=n;send({t:"join",id,name:n})};
+$("#tabs").onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;draw()}};
+const ic=k=>k==="hq"?"🏰":cat[k]?.i||"?";
 function draw(){
-  const me=S.me;
-  $("#who").textContent=me.name;$("#wins").textContent=me.wins;$("#tk").textContent=me.tekke;
-  $("#inc").textContent=`درآمد: روزی ${me.inc} تکه (هر روز = ۶۰ ثانیه)`;
-  $("#mine").innerHTML=me.cities.map((c,i)=>`<div class="city"><span>شهر ${i+1}${i?"":" (مرکز)"}</span>${bar(c)}<b>${c}</b></div>`).join("");
-  $("#def").textContent=Object.entries(me.hp).filter(([,v])=>v>0).map(([k,v])=>`${cat[k]?.n}: ${Math.ceil(v/cat[k].hp)}`).join(" · ");
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
-  $("#p-atk").classList.toggle("hide",tab!=="atk");$("#p-shop").classList.toggle("hide",tab!=="shop");
-  const own=Object.entries(me.inv).filter(([,v])=>v>0);
-  if(!own.some(([k])=>k===wsel))wsel=own[0]?.[0]||null;
-  const foes=S.all.filter(p=>p.id!==me.id);
-  $("#p-atk").innerHTML=`<b>سلاح انتخابی</b><div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:6px">${own.length?own.map(([k,v])=>`<button class="${k===wsel?"sel":""}" data-w="${k}">${cat[k].n} ×${v}</button>`).join(""):"سلاحی نداری. از فروشگاه بخر."}</div>`+
-   (foes.length?foes.map(p=>`<div class="row"><div><b>${p.name}</b><small>${p.on?"آنلاین":"آفلاین"} · 🏆 ${p.wins}</small></div><div style="display:flex;gap:4px">${p.cities.map((c,i)=>`<button class="cb ${c?"":"dead"}" data-t="${p.id}" data-c="${i}" ${c&&wsel?"":"disabled"}>${i+1}: ${c}</button>`).join("")}</div></div>`).join(""):"<div class='sub'>هنوز حریفی نیست. لینک بازی را برای دوستانت بفرست.</div>");
-  document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{wsel=b.dataset.w;draw()});
-  document.querySelectorAll(".cb").forEach(b=>b.onclick=()=>send({t:"atk",tid:b.dataset.t,ci:+b.dataset.c,w:wsel}));
-  const grp={def:"دفاع",atk:"حمله",inc:"درآمد"};
-  $("#p-shop").innerHTML=Object.keys(grp).map(g=>`<b>${grp[g]}</b>`+Object.entries(cat).filter(([,v])=>v.k===g).map(([k,v])=>`<div class="row"><div>${v.n}${v.q>1?` ×${v.q}`:""}<small>${v.d}</small></div><button data-b="${k}" ${me.tekke<v.p?"disabled":""}>${v.p} تکه</button></div>`).join("")).join("");
-  document.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>send({t:"buy",k:b.dataset.b}));
+  const me=S.me,own=S.map.map((m,i)=>m&&m[3]===id?i:-1).filter(i=>i>=0);
+  $("#who").textContent=me.name+" · "+rank(me.caps);$("#bn").disabled=Date.now()<(me.bonus||0);$("#caps").textContent=me.caps;$("#lvl").textContent=me.lv;$("#trp").textContent=me.tr;{const b0=20*(me.lv-1)**2,b1=20*me.lv**2;$("#xpb").style.width=Math.min(100,(me.xp-b0)/(b1-b0)*100)+"%"}$("#tr").textContent=me.traitor;$("#tk").textContent=me.tekke;
+  $("#inc").textContent=`درآمد: روزی ${me.inc} تکه (هر روز ۶۰ ثانیه) · ${own.length} زمین`+(me.ally?` · اتحاد «${me.ally}»`:"");
+  const inv=Object.entries(me.inv).filter(([,v])=>v>0);
+  if(!inv.some(([k])=>k===sel))sel=inv[0]?.[0]||null;
+  $("#inv").innerHTML=inv.length?inv.map(([k,v])=>`<button class="chip ${k===sel?"sel":""}" data-s="${k}">${ic(k)} ${cat[k].n} ×${v}</button>`).join(""):"<span class='sub'>انبارت خالیه. از فروشگاه بخر.</span>";
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+  const p=$("#p");
+  $("#stage").style.display=tab==="base"&&S.view?"block":"none";if(tab==="base")sync3d();
+  if(tab==="base")base(p,own);else if(tab==="map")map(p,own);else if(tab==="shop")shop(p);else if(tab==="ally")ally(p);else if(tab==="quest")quest(p);else if(tab==="emp")emp(p);else chat(p);
+  p.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>send({t:"view",i:+b.dataset.v}));
+  p.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>send({t:"gift",to:b.dataset.g,a:100}));
   $("#log").innerHTML=S.log.map(l=>`<div>${l}</div>`).join("")||"هنوز اتفاقی نیفتاده.";
+}
+$("#inv").onclick=e=>{if(e.target.dataset.s){sel=e.target.dataset.s;draw()}};
+let rep_=false;
+const rank=n=>n>=10?"فرمانده کل":n>=6?"سرلشکر":n>=3?"سرهنگ":n>=1?"سروان":"سرباز";
+$("#bn").onclick=()=>{send({t:"bonus"});beep(700)};
+function base(p,own){
+  const v=S.view;if(!v){p.textContent="زمینی نداری. از تب نقشه زمین بخر.";return}
+  const mine=v.o===id,m=S.map[v.i],al=!mine&&S.me.ally&&m[2]===S.me.ally;
+  const sh=v.sh>Date.now()?` · 🛡️ ${Math.ceil((v.sh-Date.now())/1000)} ثانیه`:"";
+  p.innerHTML=`<div class="chips">${own.map(i=>`<button class="chip ${i===v.i?"sel":""}" data-v="${i}">${S.map[i][4]||"شهر "+(i+1)}</button>`).join("")}</div>
+  <div class="row"><b>🏙️ ${m[4]||"شهر "+(v.i+1)} · ${m[5]} · 👑 ${m[6]}${mine?"":al?" (هم‌پیمان)":" · "+m[0]}${sh}</b>${mine?`<button id="rp" class="chip ${rep_?"sel":""}">🔧 ترمیم</button>`:""}</div>
+  <div class="sub">بکش تا بچرخد · دو انگشت برای زوم · ${mine?"روی خانه بزن تا انتخابت را بچینی؛ روی ساختمان بزنی برمی‌گردد":"سلاح انتخاب کن و روی ساختمان حریف بزن"}</div>`;
+  $("#rp")&&($("#rp").onclick=()=>{rep_=!rep_;draw()});
+}
+function onCell(c){
+  const v=S.view,mine=v.o===id,b=v.g[c],it=cat[sel];
+  if(mine){
+    if(rep_&&b)send({t:"repair",i:v.i,c});
+    else if(b&&b.k!=="hq")send({t:"pick",i:v.i,c});
+    else if(!b&&it&&it.k!=="atk"){send({t:"place",i:v.i,c,k:sel});beep(500,.06)}
+    else if(!b)toast("اول ساختمان یا دفاع از انبار انتخاب کن");
+  }else if(it?.k==="atk")send({t:"atk",i:v.i,c,w:sel});else toast("اول یک سلاح انتخاب کن");
+}
+function chat(p){
+  if(document.activeElement&&document.activeElement.id==="cx")return;
+  p.innerHTML=`<div style="display:flex;gap:6px"><input id="cx" maxlength="80" placeholder="پیام..." style="margin:0"><button id="cs">ارسال</button></div>`+S.chat.map(x=>`<div class="row"><span><b>${x.n}</b>${x.a?` <small style="display:inline">[${x.a}]</small>`:""}: ${x.x}</span></div>`).join("");
+  $("#cs").onclick=()=>{const x=$("#cx").value;if(x)send({t:"chat",x})};
+}
+let AC;function beep(f,d=.1,ty="square"){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch{}}
+// ---------- سه‌بعدی ----------
+const COL={cardcastle:0xd9b382,pencil:0xf5d142,ruler:0xaaaaaa,tape:0xe8e0a0,stapwall:0x888888,book:0x3a6ea5,marker:0xdd4477,ink:0x222244,dome:0x99ddee,vault:0x555555,pencil_mine:0xf5d142,printer:0xbbbbbb,library:0xd8c4a0,tekke_bank:0xf2c14e,a4_factory:0xffffff,diamond_wall:0x7fe8ff,gold_mine:0xf2c14e,hq:0xf2c14e,handk:0xffffff,thread:0x8fb8de,ped:0x9b8cf2,wall:0x2f6fd0,eraser:0xf29bb0,clip:0xb0b7c3,card:0xfff1c1,paper_s:0xfafafa,paper_m:0xdfe4ff};
+let R,sc,cam,sun,cells={},tiles=[],curI=null,fx=[],lastEv=-1,th=.8,ph=.95,dist=13,ptrs=new Map(),moved=0;
+function mk(k){
+  const g=new THREE.Group(),M=new THREE.MeshLambertMaterial({color:COL[k]||0xcccccc});
+  const bx=(w,h,d,y,m=M,x=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y+h/2,0);g.add(o)};
+  if(k==="hq"){bx(.9,.9,.9,0);const r=new THREE.Mesh(new THREE.ConeGeometry(.8,.7,4),new THREE.MeshLambertMaterial({color:0xd4474f}));r.position.y=1.25;r.rotation.y=Math.PI/4;g.add(r)}
+  else if(k==="wall")bx(.95,.8,.3,0);else if(k==="handk")bx(.7,.15,.7,0);else if(k==="eraser")bx(.9,.5,.5,0);
+  else if(k==="ped"){bx(.2,.8,.2,0);bx(.7,.1,.7,.8)}else if(k==="thread"||k==="clip"){bx(.9,.06,.06,.4);bx(.08,.45,.08,0,M,-.4);bx(.08,.45,.08,0,M,.4)}
+  else if(k==="card")bx(.7,.6,.06,0);else if(k==="paper_s")bx(.8,.5,.8,0);else if(k==="paper_m")bx(.8,.9,.8,0);else if(cat[k]?.k==="inc")bx(.85,.8,.85,0);else bx(.7,.7,.7,0);
+  return g;
+}
+const P3=c=>[c%8-3.5,Math.floor(c/8)-3.5];
+function init3d(){
+  if(R||!window.THREE)return;
+  const st=$("#stage");R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));st.appendChild(R.domElement);
+  sc=new THREE.Scene();sc.background=new THREE.Color(0xbfd9f5);cam=new THREE.PerspectiveCamera(45,1,.1,100);
+  sc.add(new THREE.AmbientLight(0xffffff,.7));sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(5,10,4);sc.add(sun);
+  const gr=new THREE.Mesh(new THREE.BoxGeometry(30,.2,30),new THREE.MeshLambertMaterial({color:0x7fae7a}));gr.position.y=-.2;sc.add(gr);
+  for(let c=0;c<64;c++){const[x,z]=P3(c);const t=new THREE.Mesh(new THREE.BoxGeometry(.96,.1,.96),new THREE.MeshLambertMaterial({color:(c%8+Math.floor(c/8))%2?0xf4f1e6:0xe3ecf8}));t.position.set(x,-.05,z);t.userData.c=c;sc.add(t);tiles.push(t)}
+  const el=R.domElement;
+  el.onpointerdown=e=>{el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);moved=0};
+  el.onpointermove=e=>{const o=ptrs.get(e.pointerId);if(!o)return;
+    if(ptrs.size===2){const [a,b]=[...ptrs.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);ptrs.set(e.pointerId,[e.clientX,e.clientY]);const [a2,b2]=[...ptrs.values()];dist=Math.min(24,Math.max(6,dist*d0/Math.hypot(a2[0]-b2[0],a2[1]-b2[1])));moved=99;return}
+    const dx=e.clientX-o[0],dy=e.clientY-o[1];moved+=Math.abs(dx)+Math.abs(dy);th-=dx*.01;ph=Math.min(1.3,Math.max(.5,ph-dy*.005));ptrs.set(e.pointerId,[e.clientX,e.clientY])};
+  el.onpointerup=e=>{ptrs.delete(e.pointerId);if(moved<8&&!ptrs.size)tap(e)};
+  el.onwheel=e=>{dist=Math.min(24,Math.max(6,dist+e.deltaY*.01));e.preventDefault()};
+  loop();
+}
+function tap(e){
+  const r=R.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
+  rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
+  const hit=rc.intersectObjects([...tiles,...Object.values(cells).map(x=>x.g)],true)[0];if(!hit)return;
+  let o=hit.object;while(o&&o.userData.c===undefined)o=o.parent;if(o)onCell(o.userData.c);
+}
+function sync3d(){
+  init3d();if(!R||!S.view)return;
+  const st=$("#stage"),w=st.clientWidth,h=st.clientHeight;if(R.domElement.width!==w*R.getPixelRatio()){R.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+  const v=S.view;
+  if(curI!==v.i){Object.values(cells).forEach(x=>sc.remove(x.g));cells={};curI=v.i}
+  v.g.forEach((b,c)=>{
+    let ce=cells[c];
+    if(!b){if(ce){sc.remove(ce.g);delete cells[c]}return}
+    if(!ce||ce.k!==b.k){if(ce)sc.remove(ce.g);const g=mk(b.k),[x,z]=P3(c);g.position.set(x,0,z);g.userData.c=c;
+      const bar=new THREE.Sprite(new THREE.SpriteMaterial({color:0x2f8f5b}));bar.position.y=b.k==="hq"?1.9:1.2;g.add(bar);ce=cells[c]={g,bar,k:b.k};sc.add(g)}
+    const mx=b.k==="hq"?100:cat[b.k]?.hp||1,r=Math.max(.02,Math.min(1,b.hp/mx));
+    ce.bar.visible=r<1;ce.bar.scale.set(.8*r,.09,1);ce.bar.material.color.setHex(r>.5?0x2f8f5b:r>.25?0xe0a526:0xd4474f);
+  });
+  const ev=S.ev;
+  if(ev){if(lastEv>=0&&ev.id!==lastEv&&ev.i===v.i)shoot(ev.c,ev.w);lastEv=ev.id}else if(lastEv<0)lastEv=0;
+}
+function shoot(c,w){
+  const[x,z]=P3(c),m=new THREE.Mesh(new THREE.SphereGeometry(.15),new THREE.MeshBasicMaterial({color:w==="compass"?0x222222:w==="glue"?0x66ccff:0xff7733}));
+  m.position.set(x+(Math.random()-.5)*10,6,z+(Math.random()-.5)*10);sc.add(m);fx.push({m,x,z,t:Date.now(),k:"p"});beep(300,.15,"triangle");
+}
+function boom(x,z){
+  beep(90,.3,"sawtooth");navigator.vibrate&&navigator.vibrate(50);
+  for(let i=0;i<10;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.07),new THREE.MeshBasicMaterial({color:[0xffcc33,0xff6633,0xffffff][i%3],transparent:true}));
+    m.position.set(x,.5,z);sc.add(m);fx.push({m,t:Date.now(),k:"b",vx:(Math.random()-.5)*3,vy:Math.random()*3,vz:(Math.random()-.5)*3})}
+}
+function loop(){
+  requestAnimationFrame(loop);if(!R||$("#stage").style.display==="none")return;
+  const now=Date.now(),d=(Math.sin(now/20000)+1)/2;
+  sc.background.setRGB(.75-.6*d,.85-.65*d,.96-.6*d);sun.intensity=.9-.6*d;
+  fx=fx.filter(f=>{const a=(now-f.t)/1000;
+    if(f.k==="p"){const q=Math.min(1,a/.5);f.m.position.set(f.m.position.x+(f.x-f.m.position.x)*q*.3,6-5.5*q,f.m.position.z+(f.z-f.m.position.z)*q*.3);
+      if(q>=1){sc.remove(f.m);boom(f.x,f.z);return false}return true}
+    f.m.position.x+=f.vx*.016;f.m.position.z+=f.vz*.016;f.m.position.y+=f.vy*.016-a*.05;f.m.material.opacity=Math.max(0,1-a/.6);
+    if(a>.6){sc.remove(f.m);return false}return true});
+  cam.position.set(dist*Math.sin(ph)*Math.sin(th),dist*Math.cos(ph),dist*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,0);R.render(sc,cam);
+}
+let realm=0;const RN=["سرزمین نخست","سرزمین دوم","سرزمین سوم"];
+function map(p,own){
+  const cost=500*(realm+1)*own.length,lock=S.me.lv<RLV[realm];
+  p.innerHTML=`<div class="chips">${RN.map((n,r)=>`<button class="chip ${r===realm?"sel":""}" data-r="${r}">${n} (سطح ${RLV[r]})${S.me.lv<RLV[r]?" 🔒":""}</button>`).join("")}</div>`+(lock?`<div class="sub" style="margin-top:8px">برای ورود به این سرزمین باید به سطح ${RLV[realm]} برسی. درآمد این سرزمین ${realm+1} برابر است.</div>`:
+  `<div class="sub" style="margin:8px 0 0">زمین خالی بخر (${cost} تکه) یا شهر بقیه را ببین. 🟦 مال تو · 🟨 هم‌پیمان · 🟥 دشمن · درآمد ×${realm+1}</div><div class="g">${S.map.slice(realm*64,realm*64+64).map((m,j)=>{
+    const cl=!m?"fr":m[3]===id?"me":S.me.ally&&m[2]===S.me.ally?"al":"en";
+    return `<button class="c ${cl}" data-m="${realm*64+j}" style="font-size:10px">${m?(m[4]||m[0]).slice(0,3):"+"}</button>`}).join("")}</div>`);
+  p.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{realm=+b.dataset.r;draw()});
+  p.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{const i=+b.dataset.m;
+    if(S.map[i]){send({t:"view",i});tab="base";draw()}
+    else if(confirm(`این زمین را به ${cost} تکه می‌خری؟`)){send({t:"buyplot",i});tab="base"}});
+}
+function shop(p){
+  const g={def:"دفاع",atk:"حمله",inc:"منبع پول"},me=S.me;
+  const row=([key,v])=>`<div class="row"><div>${v.i} ${v.n}${v.q>1?` ×${v.q}`:""}<small>${v.d}${v.lv>1?` · سطح ${v.lv}`:""}${v.hp?` · جان ${v.hp}`:""}</small></div><button data-b="${key}" ${me.lv<(v.lv||1)||(v.tp?me.tr<v.tp:me.tekke<v.p)?"disabled":""}>${v.tp?"🏆 "+v.tp:v.p}</button></div>`;
+  p.innerHTML=Object.keys(g).map(k=>`<b>${g[k]}</b>`+Object.entries(cat).filter(([,v])=>v.k===k&&!v.tp).map(row).join("")).join("")+`<b>🏆 فروشگاه جام (جام خرج می‌شود)</b>`+Object.entries(cat).filter(([,v])=>v.tp).map(row).join("");
+  p.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>send({t:"buy",k:b.dataset.b}));
+}
+function quest(p){
+  const me=S.me,q=me.q||{atk:0,des:0,plc:0,c:[0,0,0]},tier=Math.min(20,Math.floor(me.bp/150));
+  p.innerHTML=`<b>ماموریت‌های روزانه</b>`+Q.map((x,n)=>`<div class="row"><div>${x.x}<small>${Math.min(q[x.k],x.n)}/${x.n} · ${x.r.t} تکه، ${x.r.xp} امتیاز${x.r.tr?`، ${x.r.tr} جام`:""}</small></div><button data-q="${n}" ${q[x.k]>=x.n&&!q.c[n]?"":"disabled"}>${q.c[n]?"گرفته شد":"دریافت"}</button></div>`).join("")+
+  `<b style="display:block;margin-top:10px">بتل پس · مرحله ${tier} از ۲۰</b><div class="bar"><i style="width:${tier>=20?100:me.bp%150/1.5}%"></i></div><div class="row"><div class="sub">هر ۱۵۰ امتیاز یک مرحله. هر مرحله تکه می‌دهد و مراحل ۵، ۱۰، ۱۵، ۲۰ وسیله‌ی ویژه و جام.</div><button id="bpc" ${tier>me.bpc?"":"disabled"}>مرحله ${me.bpc+1}</button></div>`;
+  p.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>send({t:"qclaim",n:+b.dataset.q}));
+  $("#bpc").onclick=()=>send({t:"bpc"});
+}
+function emp(p){
+  if(document.activeElement&&document.activeElement.tagName==="INPUT"&&p.contains(document.activeElement))return;
+  const me=S.me,v=S.view,mc=v&&v.o===id;
+  p.innerHTML=`<b>امپراطوری تو</b><input id="ei" maxlength="16" placeholder="اسم امپراطوری" value="${me.emp}"><input id="ki" maxlength="14" placeholder="اسم پادشاه" value="${me.king}"><button id="es">ذخیره</button>`+
+  (mc?`<div style="margin-top:8px"><b>اسم شهر فعلی (زمین ${v.i+1})</b></div><input id="ci" maxlength="16" placeholder="اسم شهر" value="${S.map[v.i][4]||""}"><button id="cs2">ذخیره اسم شهر</button>`:"")+
+  `<div style="margin-top:10px"><b>🏆 جدول جام‌ها</b></div>`+[...S.pub].sort((a,b)=>b.tp-a.tp).map((x,n)=>`<div class="row"><div>${n+1}. ${x.emp} · 👑 ${x.king}<small>${x.name} · سطح ${x.lv} · ${x.n} شهر</small></div><span>🏆 ${x.tp}</span></div>`).join("");
+  $("#es").onclick=()=>send({t:"prof",emp:$("#ei").value,king:$("#ki").value});
+  $("#cs2")&&($("#cs2").onclick=()=>send({t:"name",i:v.i,nm:$("#ci").value}));
+}
+function ally(p){
+  const me=S.me;if(document.activeElement&&document.activeElement.id==="an")return;
+  p.innerHTML=(me.ally?`<div class="row"><b>اتحاد «${me.ally}»</b><button id="bt" style="background:var(--red)">🗡️ خیانت و خروج</button></div><div class="sub">هم‌پیمان‌ها نمی‌توانند به هم حمله کنند. خیانت یعنی ترک اتحاد، با ثبت لقب خائن.</div>`
+   :`<b>اتحاد بساز یا بپیوند</b><input id="an" maxlength="12" placeholder="اسم اتحاد"><button id="aj">پیوستن</button>`)+
+   `<div style="margin-top:10px"><b>فرمانده‌ها</b></div>`+S.pub.sort((a,b)=>b.caps-a.caps).map(x=>`<div class="row"><div>${x.name}${x.tr?" 🗡️"+x.tr:""}<small>${x.ally?"اتحاد «"+x.ally+"»":"بدون اتحاد"} · ${x.n} زمین</small></div><span>${rank(x.caps)} 🏴 ${x.caps} ${me.ally&&x.ally===me.ally&&x.name!==me.name?`<button class="chip" data-g="${x.name}">🎁 ۱۰۰</button>`:""}</span></div>`).join("");
+  $("#bt")&&($("#bt").onclick=()=>confirm("مطمئنی؟ همه می‌فهمند خیانت کردی")&&send({t:"betray"}));
+  $("#aj")&&($("#aj").onclick=()=>send({t:"ally",name:$("#an").value}));
 }
 conn();
 </script>
